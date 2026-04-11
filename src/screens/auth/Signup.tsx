@@ -13,10 +13,10 @@ import {
 import { Ionicons, FontAwesome, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../navigation/RootNavigator";
+import type { RootStackParamList } from "../../navigation/types";
 import { useMutation } from "@tanstack/react-query";
 import { saveSession, signup } from "../../lib/api/auth";
-import { User } from "../../types/types";
+import { User } from "../../types";
 
 const SignupScreen = () => {
   const navigation =
@@ -33,7 +33,7 @@ const SignupScreen = () => {
     onSuccess: async (_, user) => {
       await saveSession(user);
       Alert.alert("Success", "Account created!");
-      navigation.replace("Dashboard");
+      navigation.replace("Main");
     },
     onError: (error: any) => {
       Alert.alert("Signup Failed", error.message || "Something went wrong.");
@@ -69,7 +69,7 @@ const SignupScreen = () => {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 justify-center px-6 pt-10">
+        <View className="px-6 pt-10 pb-6">
           <Text className="text-2xl font-bold text-center mb-8">
             Create Account
           </Text>
@@ -152,7 +152,7 @@ const SignupScreen = () => {
               <AntDesign name="google" size={24} color="#DB4437" />
             </TouchableOpacity>
             <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="apple1" size={24} color="#000" />
+              <AntDesign name="apple" size={24} color="#000" />
             </TouchableOpacity>
           </View>
 

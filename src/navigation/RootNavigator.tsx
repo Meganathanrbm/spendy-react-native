@@ -1,44 +1,72 @@
-import React, { useEffect } from "react";
-import { NavigationContainer, useNavigation } from "@react-navigation/native";
+import React from "react";
+import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useThemeContext } from "../contexts/ThemeContext";
+import { RootStackParamList } from "./types";
+
 import Login from "../screens/auth/Login";
 import Signup from "../screens/auth/Signup";
 import BottomTabs from "./BottomTabs";
-import AddTransactionScreen from "../screens/Transactions/AddTransactionScreen";
-import { SafeAreaView } from "react-native-safe-area-context";
-import AddCategoryScreen from "../screens/Category/AddCategoryScreen";
 
-export type RootStackParamList = {
-  Login: undefined;
-  Dashboard: undefined;
-  Signup: undefined;
-  AddTransactionModal: undefined;
-  AddCategory: undefined;
-};
+// Screens navigated to from within tabs
+import AddTransactionScreen from "../screens/records/AddTransactionScreen";
+import AddAccountScreen from "../screens/Accounts/AddAccountScreen";
+import AddAssetScreen from "../screens/assets/AddAssetScreen";
+import SetBudgetScreen from "../screens/budgets/SetBudgetScreen";
 
-const RootNavigator = () => {
-  const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export default function RootNavigator() {
+  const { mode, theme } = useThemeContext();
+
+  // Wire React Navigation's theme to ours for background + header tinting
+  const navTheme = {
+    ...(mode === "dark" ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(mode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.text,
+      border: theme.colors.border,
+      primary: theme.colors.primary,
+    },
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName="Login"
-          screenOptions={{ headerShown: false }}
-        >
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="Signup" component={Signup} />
-          <Stack.Screen name="Dashboard" component={BottomTabs} />
-          <Stack.Screen name="AddCategory" component={AddCategoryScreen} />
-          <Stack.Screen
-            name="AddTransactionModal"
-            component={AddTransactionScreen}
-            options={{ presentation: "modal" }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaView>
-  );
-};
+    <NavigationContainer theme={navTheme}>
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{ headerShown: false }}
+      >
+        {/* Auth */}
+        <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="Signup" component={Signup} />
 
-export default RootNavigator;
+        {/* Main app */}
+        <Stack.Screen name="Main" component={BottomTabs} />
+
+        {/* Modals / full-screen pushes */}
+        <Stack.Screen
+          name="AddTransaction"
+          component={AddTransactionScreen}
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="AddAccount"
+          component={AddAccountScreen}
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="AddAsset"
+          component={AddAssetScreen}
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="SetBudget"
+          component={SetBudgetScreen}
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

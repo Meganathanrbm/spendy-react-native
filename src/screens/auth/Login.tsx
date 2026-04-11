@@ -13,7 +13,7 @@ import {
 import { Ionicons, FontAwesome, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../navigation/RootNavigator";
+import type { RootStackParamList } from "../../navigation/types";
 import { getSession, saveSession, login } from "../../lib/api/auth";
 import { useMutation } from "@tanstack/react-query";
 import { Image } from "react-native";
@@ -26,7 +26,7 @@ const LoginScreen = () => {
     const checkSession = async () => {
       const user = await getSession();
       if (user) {
-        navigation.replace("Dashboard");
+        navigation.replace("Main");
       }
     };
     checkSession();
@@ -42,7 +42,7 @@ const LoginScreen = () => {
     onSuccess: async (user) => {
       await saveSession(user);
       Alert.alert("Welcome", `Logged in as ${user.name}`);
-      navigation.replace("Dashboard");
+      navigation.replace("Main");
     },
     onError: (error: any) => {
       Alert.alert("Login Failed", error.message || "Invalid credentials.");
@@ -67,7 +67,7 @@ const LoginScreen = () => {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 justify-center px-6 pt-10">
+        <View className="px-6 pt-10 pb-6">
           <Image
             source={require("../../../assets/icon.png")}
             style={{
@@ -156,7 +156,7 @@ const LoginScreen = () => {
               <AntDesign name="google" size={24} color="#DB4437" />
             </TouchableOpacity>
             <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="apple1" size={24} color="#000" />
+              <AntDesign name="apple" size={24} color="#000" />
             </TouchableOpacity>
           </View>
 

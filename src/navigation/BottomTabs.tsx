@@ -1,215 +1,144 @@
-import React, { useState } from "react";
+import React from "react";
+import { View, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { View, Modal, Pressable, Alert, ScrollView } from "react-native";
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-  AntDesign,
-} from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
-import Dashboard from "../screens/dashboard/Dashboard";
+import { useTheme } from "../hooks/useTheme";
+import { BottomTabParamList } from "./types";
+import { layout } from "../theme/spacing";
+
+// Screens
+import RecordsScreen from "../screens/records/RecordsScreen";
+import AnalysisScreen from "../screens/analysis/AnalysisScreen";
+import BudgetsScreen from "../screens/budgets/BudgetsScreen";
 import AccountsScreen from "../screens/Accounts/AccountsScreen";
-import TransactionsScreen from "../screens/Transactions/TransactionsScreen";
-import AddTransactionScreen from "../screens/Transactions/AddTransactionScreen";
-import CategoryScreen from "../screens/Category/CategoryScreen";
+import AssetsScreen from "../screens/assets/AssetsScreen";
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<BottomTabParamList>();
 
-const STORAGE_KEY = "@spendy_transactions";
+// ─── Tab icons ───────────────────────────────────────────────────────────────
 
-type Transaction = {
-  id: string;
-  title: string;
-  amount: number;
-  category: string;
-  type: "income" | "expense";
-  date: string;
-  icon: string;
+type TabIconProps = { name: string; focused: boolean; color: string; size: number };
+
+const TAB_ICONS: Record<
+  keyof BottomTabParamList,
+  { active: string; inactive: string; lib: "ionicons" | "material" }
+> = {
+  Records:  { active: "receipt",              inactive: "receipt-outline",        lib: "ionicons" },
+  Analysis: { active: "bar-chart",            inactive: "bar-chart-outline",      lib: "ionicons" },
+  Budgets:  { active: "wallet",               inactive: "wallet-outline",         lib: "ionicons" },
+  Accounts: { active: "card",                 inactive: "card-outline",           lib: "ionicons" },
+  Assets:   { active: "trending-up",          inactive: "trending-up-outline",    lib: "ionicons" },
 };
 
-const DummyScreen = () => (
-  <View className="flex-1 items-center justify-center bg-gray-100">
-    Hello World
-  </View>
-);
-
-type PlusButtonProps = {
-  onPress?: () => void;
+const TabIcon = ({ name, focused, color, size }: TabIconProps) => {
+  const config = TAB_ICONS[name as keyof BottomTabParamList];
+  if (!config) return null;
+  const iconName = focused ? config.active : config.inactive;
+  return <Ionicons name={iconName as any} size={size} color={color} />;
 };
 
-const CustomPlusButton = ({ onPress }: PlusButtonProps) => (
-  <Pressable
-    onPress={onPress}
-    className="w-16 h-16 bg-blue-600 rounded-full items-center justify-center -mt-8 ml-4"
-    style={({ pressed }) => [
-      {
-        opacity: pressed ? 0.8 : 1,
-        transform: [{ scale: pressed ? 0.95 : 1 }],
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 5,
-        elevation: 6,
-      },
-    ]}
-    accessibilityLabel="Open add transaction modal"
-  >
-    <AntDesign name="plus" size={26} color="#fff" />
-  </Pressable>
-);
+// ─── Custom Tab Bar ───────────────────────────────────────────────────────────
 
-export default function BottomTabs() {
+const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const loadTransactions = async () => {
-    try {
-      setLoading(true);
-      const json = await AsyncStorage.getItem(STORAGE_KEY);
-      const data = json ? JSON.parse(json) : [];
-      setTransactions(data.reverse()); // Newest first
-    } catch (err) {
-      console.error("Error loading transactions:", err);
-      Alert.alert("Error", "Failed to load transactions.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarShowLabel: false,
-          headerShown: false,
-          tabBarStyle: {
-            position: "absolute",
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            height: 10 + insets.bottom,
-            paddingBottom: insets.bottom + 8,
-            backgroundColor: "#fff",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 5,
-          },
-        }}
-      >
-        <Tab.Screen
-          name="Activity"
-          component={Dashboard}
-          options={{
-            title: "new",
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "bar-chart" : "bar-chart-outline"}
-                size={24}
-                color={focused ? "#2563EB" : color}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Budget"
-          component={CategoryScreen}
-          options={{
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "pie-chart" : "pie-chart-outline"}
-                size={24}
-                color={focused ? "#2563EB" : color}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Add"
-          component={DummyScreen}
-          options={{
-            tabBarButton: (props) => (
-              <CustomPlusButton
-                {...props}
-                onPress={() => setModalVisible(true)}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Transactions"
-          component={TransactionsScreen}
-          options={{
-            tabBarIcon: ({ color, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? "swap-horizontal-bold" : "swap-horizontal"}
-                size={24}
-                color={focused ? "#2563EB" : color}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Accounts"
-          component={AccountsScreen}
-          options={{
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={24}
-                color={focused ? "#2563EB" : color}
-              />
-            ),
-          }}
-        />
-      </Tab.Navigator>
+    <View
+      style={[
+        styles.tabBar,
+        {
+          backgroundColor: colors.tabBackground,
+          borderTopColor: colors.border,
+          paddingBottom: insets.bottom,
+          height: layout.tabBarHeight + insets.bottom,
+        },
+      ]}
+    >
+      {state.routes.map((route, index) => {
+        descriptors[route.key];
+        const isFocused = state.index === index;
+        const color = isFocused ? colors.tabActive : colors.tabInactive;
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View
-            className="bg-white rounded-t-3xl shadow-xl w-full max-h-[90%]"
-            style={{
-              paddingTop: 16,
-              paddingBottom: insets.bottom,
-              paddingHorizontal: 12,
-            }}
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name as keyof BottomTabParamList);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={onPress}
+            activeOpacity={0.7}
+            style={styles.tabItem}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFocused }}
           >
-            {/* Close Button */}
-            <View className="flex-row justify-end mb-2">
-              <Pressable
-                onPress={() => setModalVisible(false)}
-                className="p-2 rounded-full bg-gray-200"
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                accessibilityLabel="Close modal"
-              >
-                <AntDesign name="close" size={20} color="#4B5563" />
-              </Pressable>
-            </View>
+            {/* Active indicator dot */}
+            {isFocused && (
+              <View style={[styles.activeDot, { backgroundColor: colors.tabActive }]} />
+            )}
+            <TabIcon name={route.name} focused={isFocused} color={color} size={22} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
-            {/* Add Transaction Form */}
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            >
-              <AddTransactionScreen
-                onSave={() => {
-                  setModalVisible(false);
-                  loadTransactions();
-                }}
-              />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </>
+// ─── Navigator ───────────────────────────────────────────────────────────────
+
+export default function BottomTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Records"  component={RecordsScreen} />
+      <Tab.Screen name="Analysis" component={AnalysisScreen} />
+      <Tab.Screen name="Budgets"  component={BudgetsScreen} />
+      <Tab.Screen name="Accounts" component={AccountsScreen} />
+      <Tab.Screen name="Assets"   component={AssetsScreen} />
+    </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 10,
+    position: "relative",
+  },
+  activeDot: {
+    position: "absolute",
+    top: 0,
+    width: 24,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+});

@@ -2,11 +2,11 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 
-export default function AccountsScreen() {
+export default function AddAccountScreen() {
   const { colors } = useTheme();
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={{ color: colors.text }}>Accounts — coming in Phase 8</Text>
+      <Text style={{ color: colors.text }}>Add Account — coming in Phase 8</Text>
     </View>
   );
 }
