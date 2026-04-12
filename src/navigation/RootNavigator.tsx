@@ -1,25 +1,36 @@
 import React from "react";
-import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { View, ActivityIndicator } from "react-native";
 import { useThemeContext } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 import { RootStackParamList } from "./types";
 
+// Auth screens
 import Login from "../screens/auth/Login";
 import Signup from "../screens/auth/Signup";
-import BottomTabs from "./BottomTabs";
 
-// Screens navigated to from within tabs
+// App screens
+import BottomTabs from "./BottomTabs";
 import AddTransactionScreen from "../screens/records/AddTransactionScreen";
-import AddAccountScreen from "../screens/Accounts/AddAccountScreen";
+import AddAccountScreen from "../screens/accounts/AddAccountScreen";
 import AddAssetScreen from "../screens/assets/AddAssetScreen";
+import EditAssetScreen from "../screens/assets/EditAssetScreen";
 import SetBudgetScreen from "../screens/budgets/SetBudgetScreen";
+import SettingsScreen from "../screens/settings/SettingsScreen";
+import CategoriesScreen from "../screens/settings/CategoriesScreen";
+import SMSInboxScreen from "../screens/sms/SMSInboxScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { mode, theme } = useThemeContext();
+  const { user, isLoading } = useAuth();
 
-  // Wire React Navigation's theme to ours for background + header tinting
   const navTheme = {
     ...(mode === "dark" ? DarkTheme : DefaultTheme),
     colors: {
@@ -32,40 +43,59 @@ export default function RootNavigator() {
     },
   };
 
+  // Show a blank loading screen while restoring session from AsyncStorage.
+  // This prevents the Login screen from flashing before we know auth state.
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator
-        initialRouteName="Login"
-        screenOptions={{ headerShown: false }}
-      >
-        {/* Auth */}
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Signup" component={Signup} />
-
-        {/* Main app */}
-        <Stack.Screen name="Main" component={BottomTabs} />
-
-        {/* Modals / full-screen pushes */}
-        <Stack.Screen
-          name="AddTransaction"
-          component={AddTransactionScreen}
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen
-          name="AddAccount"
-          component={AddAccountScreen}
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen
-          name="AddAsset"
-          component={AddAssetScreen}
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen
-          name="SetBudget"
-          component={SetBudgetScreen}
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {user ? (
+          // ── Authenticated stack ───────────────────────────────────────────
+          <>
+            <Stack.Screen name="Main" component={BottomTabs} />
+            <Stack.Screen
+              name="AddTransaction"
+              component={AddTransactionScreen}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="AddAccount"
+              component={AddAccountScreen}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="AddAsset"
+              component={AddAssetScreen}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="SetBudget"
+              component={SetBudgetScreen}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="CategoriesNav" component={CategoriesScreen} />
+            <Stack.Screen name="SMSInbox" component={SMSInboxScreen} />
+            <Stack.Screen
+              name="EditAsset"
+              component={EditAssetScreen}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
+          </>
+        ) : (
+          // ── Auth stack ────────────────────────────────────────────────────
+          <>
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Signup" component={Signup} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

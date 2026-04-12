@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../hooks/useTheme";
+import { useDrawer } from "../../contexts/DrawerContext";
 import { layout } from "../../theme/spacing";
 
 type Props = {
@@ -20,6 +21,7 @@ export default function AppHeader({
 }: Props) {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
+  const { openDrawer } = useDrawer();
 
   return (
     <View
@@ -34,7 +36,7 @@ export default function AppHeader({
     >
       {/* Left — hamburger */}
       <TouchableOpacity
-        onPress={onMenuPress}
+        onPress={onMenuPress ?? openDrawer}
         style={styles.iconBtn}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >

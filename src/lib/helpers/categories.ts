@@ -75,3 +75,15 @@ export const getCategoryByName = (
   name: string,
   categories: Category[]
 ): Category | undefined => categories.find((c) => c.name === name);
+
+// ─── Sync lookup helpers ──────────────────────────────────────────────────────
+
+export const getIcon = (categoryName: string): string => {
+  const cat = defaultCategories.find((c) => c.name === categoryName);
+  return cat?.icon ?? "📦";
+};
+
+export const getIconBgColor = (categoryName: string): string => {
+  const cat = defaultCategories.find((c) => c.name === categoryName);
+  return (cat?.color ?? "#64748B") + "22";
+};

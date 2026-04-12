@@ -1,13 +1,13 @@
 import React from "react";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import AddAssetModal from "../../components/assets/AddAssetModal";
+import AddAccountModal from "../../components/accounts/AddAccountModal";
 
-export default function AddAssetScreen() {
+export default function AddAccountScreen() {
   const navigation = useNavigation();
   return (
     <View style={{ flex: 1 }}>
-      <AddAssetModal visible onClose={() => navigation.goBack()} />
+      <AddAccountModal visible onClose={() => navigation.goBack()} />
     </View>
   );
 }

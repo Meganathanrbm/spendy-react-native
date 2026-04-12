@@ -128,7 +128,7 @@ export default function BudgetsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AppHeader title="Budgets" onMenuPress={() => {}} />
+      <AppHeader title="Budgets"  />
       <MonthNavigator month={month} onChange={setMonth} />
 
       <ScrollView

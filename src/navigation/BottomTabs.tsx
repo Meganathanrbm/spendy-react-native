@@ -4,17 +4,23 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useTheme } from "../hooks/useTheme";
-import { BottomTabParamList } from "./types";
+import { BottomTabParamList, RootStackParamList } from "./types";
 import { layout } from "../theme/spacing";
+import { DrawerProvider, useDrawer } from "../contexts/DrawerContext";
 
 // Screens
 import RecordsScreen from "../screens/records/RecordsScreen";
 import AnalysisScreen from "../screens/analysis/AnalysisScreen";
 import BudgetsScreen from "../screens/budgets/BudgetsScreen";
-import AccountsScreen from "../screens/Accounts/AccountsScreen";
+import AccountsScreen from "../screens/accounts/AccountsScreen";
 import AssetsScreen from "../screens/assets/AssetsScreen";
+
+// Drawer
+import DrawerMenu from "../components/navigation/DrawerMenu";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -95,20 +101,51 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   );
 };
 
+// ─── Inner navigator (consumes DrawerContext) ────────────────────────────────
+
+function BottomTabsInner() {
+  const { isOpen, closeDrawer } = useDrawer();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handleNavigate = (screen: string) => {
+    if (screen === "Settings") {
+      navigation.navigate("Settings");
+    } else if (screen === "Categories") {
+      navigation.navigate("CategoriesNav");
+    } else if (screen === "SMSInbox") {
+      navigation.navigate("SMSInbox");
+    }
+  };
+
+  return (
+    <>
+      <Tab.Navigator
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tab.Screen name="Records"  component={RecordsScreen} />
+        <Tab.Screen name="Analysis" component={AnalysisScreen} />
+        <Tab.Screen name="Budgets"  component={BudgetsScreen} />
+        <Tab.Screen name="Accounts" component={AccountsScreen} />
+        <Tab.Screen name="Assets"   component={AssetsScreen} />
+      </Tab.Navigator>
+
+      <DrawerMenu
+        visible={isOpen}
+        onClose={closeDrawer}
+        onNavigate={handleNavigate}
+      />
+    </>
+  );
+}
+
 // ─── Navigator ───────────────────────────────────────────────────────────────
 
 export default function BottomTabs() {
   return (
-    <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Records"  component={RecordsScreen} />
-      <Tab.Screen name="Analysis" component={AnalysisScreen} />
-      <Tab.Screen name="Budgets"  component={BudgetsScreen} />
-      <Tab.Screen name="Accounts" component={AccountsScreen} />
-      <Tab.Screen name="Assets"   component={AssetsScreen} />
-    </Tab.Navigator>
+    <DrawerProvider>
+      <BottomTabsInner />
+    </DrawerProvider>
   );
 }
 

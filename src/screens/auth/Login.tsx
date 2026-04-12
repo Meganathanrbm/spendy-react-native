@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,28 +9,20 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
+  Image,
 } from "react-native";
 import { Ionicons, FontAwesome, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import { getSession, saveSession, login } from "../../lib/api/auth";
+import { login } from "../../lib/api/auth";
+import { useAuth } from "../../contexts/AuthContext";
 import { useMutation } from "@tanstack/react-query";
-import { Image } from "react-native";
 
 const LoginScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const user = await getSession();
-      if (user) {
-        navigation.replace("Main");
-      }
-    };
-    checkSession();
-  }, []);
+  const { login: authLogin } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,9 +32,9 @@ const LoginScreen = () => {
   const mutation = useMutation({
     mutationFn: () => login(email.trim().toLowerCase(), password),
     onSuccess: async (user) => {
-      await saveSession(user);
-      Alert.alert("Welcome", `Logged in as ${user.name}`);
-      navigation.replace("Main");
+      // AuthContext.login saves session + sets user state → RootNavigator
+      // automatically switches to the authenticated stack (no navigate needed)
+      await authLogin({ name: user.name, email: user.email });
     },
     onError: (error: any) => {
       Alert.alert("Login Failed", error.message || "Invalid credentials.");

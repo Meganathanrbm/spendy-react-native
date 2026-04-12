@@ -23,7 +23,10 @@ export const useSaveTransaction = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: saveTransaction,
-    onSuccess: () => qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
   });
 };
 
@@ -31,7 +34,10 @@ export const useDeleteTransaction = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deleteTransaction,
-    onSuccess: () => qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
   });
 };
 

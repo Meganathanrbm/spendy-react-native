@@ -11,7 +11,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import uuid from "react-native-uuid";
@@ -19,7 +22,6 @@ import uuid from "react-native-uuid";
 import { useTheme } from "../../hooks/useTheme";
 import { useSaveTransaction } from "../../hooks/useTransactions";
 import { useAccounts } from "../../hooks/useAccounts";
-import { updateAccountBalance } from "../../lib/api/accounts";
 import { RootStackParamList } from "../../navigation/types";
 import { Transaction, TransactionType, Account, Category } from "../../types";
 import { layout } from "../../theme/spacing";
@@ -31,7 +33,10 @@ import CategoryPicker from "../../components/transaction/CategoryPicker";
 import Calculator from "../../components/transaction/Calculator";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Route = NativeStackScreenProps<RootStackParamList, "AddTransaction">["route"];
+type Route = NativeStackScreenProps<
+  RootStackParamList,
+  "AddTransaction"
+>["route"];
 
 export default function AddTransactionScreen() {
   const { colors, typography } = useTheme();
@@ -47,7 +52,9 @@ export default function AddTransactionScreen() {
   const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
+  );
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -58,16 +65,18 @@ export default function AddTransactionScreen() {
       const defaultId = route.params?.defaultAccountId;
       const primary = defaultId
         ? accounts.find((a) => a.id === defaultId)
-        : accounts.find((a) => a.isPrimary) ?? accounts[0];
+        : (accounts.find((a) => a.isPrimary) ?? accounts[0]);
       setSelectedAccount(primary ?? null);
     }
   }, [accounts]);
 
   // Active color by type
   const accentColor =
-    type === "income" ? colors.income
-    : type === "transfer" ? colors.transfer
-    : colors.expense;
+    type === "income"
+      ? colors.income
+      : type === "transfer"
+        ? colors.transfer
+        : colors.expense;
 
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -98,22 +107,20 @@ export default function AddTransactionScreen() {
 
     try {
       await saveMutation.mutateAsync(tx);
-
-      // Update account balance
-      const delta = type === "income" ? numAmount : -numAmount;
-      await updateAccountBalance(selectedAccount.id, delta);
-
       navigation.goBack();
     } catch {
       Alert.alert("Error", "Failed to save transaction.");
     }
   };
 
-  const formattedDateTime = `${formatDate(date.toISOString())}  ${date.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })}`;
+  const formattedDateTime = `${formatDate(date.toISOString())}  ${date.toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    },
+  )}`;
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -129,24 +136,50 @@ export default function AddTransactionScreen() {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerBtn}
+        >
           <Ionicons name="close" size={22} color={colors.text} />
-          <Text style={[styles.headerBtnLabel, { color: colors.text, fontSize: typography.size.base }]}>
+          <Text
+            style={[
+              styles.headerBtnLabel,
+              { color: colors.text, fontSize: typography.size.base },
+            ]}
+          >
             Cancel
           </Text>
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: colors.text, fontSize: typography.size.md, fontWeight: typography.weight.semibold }]}>
+        <Text
+          style={[
+            styles.headerTitle,
+            {
+              color: colors.text,
+              fontSize: typography.size.md,
+              fontWeight: typography.weight.semibold,
+            },
+          ]}
+        >
           New Transaction
         </Text>
 
         <TouchableOpacity
           onPress={handleSave}
           disabled={saveMutation.isPending}
-          style={[styles.headerBtn, styles.saveBtn, { backgroundColor: accentColor }]}
+          style={[
+            styles.headerBtn,
+            styles.saveBtn,
+            { backgroundColor: accentColor },
+          ]}
         >
           <Ionicons name="checkmark" size={16} color="#fff" />
-          <Text style={[styles.headerBtnLabel, { color: "#fff", fontWeight: typography.weight.semibold }]}>
+          <Text
+            style={[
+              styles.headerBtnLabel,
+              { color: "#fff", fontWeight: typography.weight.semibold },
+            ]}
+          >
             {saveMutation.isPending ? "Saving…" : "Save"}
           </Text>
         </TouchableOpacity>
@@ -177,14 +210,23 @@ export default function AddTransactionScreen() {
         </View>
 
         {/* Description */}
-        <View style={[styles.descriptionBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.descriptionBox,
+            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+          ]}
+        >
           <TextInput
             placeholder="Description (optional)"
             placeholderTextColor={colors.textMuted}
             value={description}
             onChangeText={setDescription}
-            style={[styles.descriptionInput, { color: colors.text, fontSize: typography.size.base }]}
-            maxLength={80}
+            style={[
+              styles.descriptionInput,
+              { color: colors.text, fontSize: typography.size.base },
+            ]}
+            maxLength={100}
+            multiline
           />
         </View>
 
@@ -207,30 +249,73 @@ export default function AddTransactionScreen() {
         </View>
 
         {/* Calculator */}
-        <Calculator value={amount} onChange={setAmount} accentColor={accentColor} />
+        <Calculator
+          value={amount}
+          onChange={setAmount}
+          accentColor={accentColor}
+        />
 
         {/* Date / Time row */}
         <View style={[styles.dateRow, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+            style={[
+              styles.datePill,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
           >
-            <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
-              {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.datePillText,
+                { color: colors.text, fontSize: typography.size.sm },
+              ]}
+            >
+              {date.toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => setShowTimePicker(true)}
-            style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+            style={[
+              styles.datePill,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
           >
-            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
-              {date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+            <Ionicons
+              name="time-outline"
+              size={14}
+              color={colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.datePillText,
+                { color: colors.text, fontSize: typography.size.sm },
+              ]}
+            >
+              {date.toLocaleTimeString("en-IN", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
             </Text>
           </TouchableOpacity>
         </View>
+        
       </ScrollView>
 
       {/* Date / Time Pickers */}
@@ -299,7 +384,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   descriptionInput: {
-    height: 44,
+    height: 100,
     padding: 0,
   },
   amountDisplay: {

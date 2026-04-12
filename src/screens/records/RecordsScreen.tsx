@@ -16,12 +16,17 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
-import { useTransactionsByMonth, useDeleteTransaction, useMonthlySummary } from "../../hooks/useTransactions";
+import {
+  useTransactionsByMonth,
+  useDeleteTransaction,
+  useMonthlySummary,
+} from "../../hooks/useTransactions";
 import { usePrimaryAccount } from "../../hooks/useAccounts";
 import { groupTransactionsByDate } from "../../lib/api/transactions";
 import { currentMonth } from "../../lib/helpers/date";
 import { layout } from "../../theme/spacing";
 import { RootStackParamList } from "../../navigation/types";
+import { Transaction } from "../../types";
 
 import AppHeader from "../../components/common/AppHeader";
 import MonthNavigator from "../../components/common/MonthNavigator";
@@ -29,7 +34,6 @@ import SummaryBar from "../../components/records/SummaryBar";
 import AccountBanner from "../../components/records/AccountBanner";
 import DateGroupHeader from "../../components/records/DateGroupHeader";
 import TransactionItem from "../../components/records/TransactionItem";
-import { Transaction } from "../../types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -42,12 +46,10 @@ export default function RecordsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
-  // Data
   const { data: transactions = [], isLoading, refetch } = useTransactionsByMonth(month);
   const { data: primaryAccount } = usePrimaryAccount();
   const deleteMutation = useDeleteTransaction();
 
-  // Filter by search
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return transactions;
     const q = searchQuery.toLowerCase();
@@ -58,10 +60,8 @@ export default function RecordsScreen() {
     );
   }, [transactions, searchQuery]);
 
-  // Summary (always from full month, not filtered)
   const { income, expense } = useMonthlySummary(transactions);
 
-  // Group by date for SectionList
   const sections = useMemo(() => {
     const groups = groupTransactionsByDate(filtered);
     return groups.map((g) => ({ title: g.date, data: g.items }));
@@ -69,18 +69,14 @@ export default function RecordsScreen() {
 
   const handleDelete = useCallback(
     (tx: Transaction) => {
-      Alert.alert(
-        "Delete Transaction",
-        `Delete "${tx.title}"?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => deleteMutation.mutate(tx.id),
-          },
-        ]
-      );
+      Alert.alert("Delete Transaction", `Delete "${tx.title}"?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(tx.id),
+        },
+      ]);
     },
     [deleteMutation]
   );
@@ -95,11 +91,8 @@ export default function RecordsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <AppHeader
         title="Records"
-        onMenuPress={() => {}}
-        onSearchPress={handleSearchToggle}
         rightElement={
           <TouchableOpacity onPress={handleSearchToggle} style={styles.iconBtn}>
             <Ionicons
@@ -111,14 +104,8 @@ export default function RecordsScreen() {
         }
       />
 
-      {/* Search bar (expandable) */}
       {isSearching && (
-        <View
-          style={[
-            styles.searchBar,
-            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-          ]}
-        >
+        <View style={[styles.searchBar, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={16} color={colors.textMuted} />
           <TextInput
             autoFocus
@@ -126,10 +113,7 @@ export default function RecordsScreen() {
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={[
-              styles.searchInput,
-              { color: colors.text, fontSize: typography.size.base },
-            ]}
+            style={[styles.searchInput, { color: colors.text, fontSize: typography.size.base }]}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
@@ -139,34 +123,24 @@ export default function RecordsScreen() {
         </View>
       )}
 
-      {/* Month navigator */}
-      <View style={[styles.monthNav, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <MonthNavigator month={month} onChange={setMonth} />
-      </View>
-
-      {/* Summary bar — sticky below month nav */}
-      <SummaryBar income={income} expense={expense} />
-
-      {/* Transaction list */}
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-          />
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />
         }
         ListHeaderComponent={
-          <AccountBanner
-            account={primaryAccount ?? null}
-            income={income}
-            expense={expense}
-            onPress={() => navigation.navigate("Main")}
-          />
+          <View>
+            <AccountBanner
+              account={primaryAccount ?? null}
+              income={income}
+              expense={expense}
+              onPress={() => navigation.navigate("Accounts" as any)}
+            />
+            <MonthNavigator month={month} onChange={setMonth} />
+            <SummaryBar income={income} expense={expense} />
+          </View>
         }
-        ListHeaderComponentStyle={{ backgroundColor: colors.background }}
         renderSectionHeader={({ section }) => (
           <DateGroupHeader date={section.title} transactions={section.data} />
         )}
@@ -180,43 +154,20 @@ export default function RecordsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 36 }}>📭</Text>
-            <Text
-              style={[
-                styles.emptyTitle,
-                {
-                  color: colors.text,
-                  fontSize: typography.size.lg,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
+            <Text style={[styles.emptyTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.semibold }]}>
               No transactions
             </Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              {searchQuery
-                ? `No results for "${searchQuery}"`
-                : "Tap + to add your first transaction"}
+              {searchQuery ? `No results for "${searchQuery}"` : "Tap + to add your first transaction"}
             </Text>
           </View>
         }
         stickySectionHeadersEnabled
-        contentContainerStyle={{
-          paddingBottom: layout.tabBarHeight + insets.bottom + 24,
-          flexGrow: 1,
-        }}
-        // Sticky summary bar just below account banner
-        stickyHeaderHiddenOnScroll={false}
+        contentContainerStyle={{ paddingBottom: layout.tabBarHeight + insets.bottom + 24, flexGrow: 1 }}
       />
 
-      {/* FAB */}
       <TouchableOpacity
-        style={[
-          styles.fab,
-          {
-            backgroundColor: colors.primary,
-            bottom: layout.tabBarHeight + insets.bottom + 16,
-          },
-        ]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: layout.tabBarHeight + insets.bottom + 16 }]}
         onPress={() => navigation.navigate("AddTransaction")}
         activeOpacity={0.85}
       >
@@ -228,12 +179,7 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  iconBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -245,28 +191,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    padding: 0,
-  },
-  monthNav: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 80,
-    gap: 8,
-  },
-  emptyTitle: {
-    marginTop: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    paddingHorizontal: 32,
-  },
+  searchInput: { flex: 1, padding: 0 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80, gap: 8 },
+  emptyTitle: { marginTop: 8 },
+  emptySubtitle: { fontSize: 14, textAlign: "center", paddingHorizontal: 32 },
   fab: {
     position: "absolute",
     right: 20,

@@ -15,12 +15,14 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useMutation } from "@tanstack/react-query";
-import { saveSession, signup } from "../../lib/api/auth";
+import { signup } from "../../lib/api/auth";
+import { useAuth } from "../../contexts/AuthContext";
 import { User } from "../../types";
 
 const SignupScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { login: authLogin } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,9 +33,8 @@ const SignupScreen = () => {
   const mutation = useMutation({
     mutationFn: (user: User) => signup(user),
     onSuccess: async (_, user) => {
-      await saveSession(user);
       Alert.alert("Success", "Account created!");
-      navigation.replace("Main");
+      await authLogin({ name: user.name, email: user.email });
     },
     onError: (error: any) => {
       Alert.alert("Signup Failed", error.message || "Something went wrong.");

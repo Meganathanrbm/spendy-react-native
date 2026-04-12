@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Transaction } from "../../types";
+import { updateAccountBalance } from "./accounts";
 
 const KEY = "@spendy_transactions";
 
@@ -14,12 +15,33 @@ export const saveTransaction = async (tx: Transaction): Promise<void> => {
   const data: Transaction[] = json ? JSON.parse(json) : [];
   data.push(tx);
   await AsyncStorage.setItem(KEY, JSON.stringify(data));
+  // Update account balance
+  if (tx.type === "income") {
+    await updateAccountBalance(tx.accountId, tx.amount);
+  } else if (tx.type === "expense") {
+    await updateAccountBalance(tx.accountId, -tx.amount);
+  } else if (tx.type === "transfer") {
+    if (tx.fromAccountId) await updateAccountBalance(tx.fromAccountId, -tx.amount);
+    if (tx.toAccountId) await updateAccountBalance(tx.toAccountId, tx.amount);
+  }
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
   const json = await AsyncStorage.getItem(KEY);
   const data: Transaction[] = json ? JSON.parse(json) : [];
+  const tx = data.find((t) => t.id === id);
   await AsyncStorage.setItem(KEY, JSON.stringify(data.filter((t) => t.id !== id)));
+  // Reverse the balance effect
+  if (tx) {
+    if (tx.type === "income") {
+      await updateAccountBalance(tx.accountId, -tx.amount);
+    } else if (tx.type === "expense") {
+      await updateAccountBalance(tx.accountId, tx.amount);
+    } else if (tx.type === "transfer") {
+      if (tx.fromAccountId) await updateAccountBalance(tx.fromAccountId, tx.amount);
+      if (tx.toAccountId) await updateAccountBalance(tx.toAccountId, -tx.amount);
+    }
+  }
 };
 
 export const clearAllTransactions = async (): Promise<void> => {

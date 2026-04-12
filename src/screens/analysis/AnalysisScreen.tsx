@@ -69,7 +69,7 @@ export default function AnalysisScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AppHeader title="Analysis" onMenuPress={() => {}} />
+      <AppHeader title="Analysis"  />
 
       <MonthNavigator month={month} onChange={setMonth} />
       <SummaryBar income={income} expense={expense} />

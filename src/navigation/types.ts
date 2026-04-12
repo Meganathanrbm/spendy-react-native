@@ -7,6 +7,9 @@ export type RootStackParamList = {
   AddAsset: undefined;
   SetBudget: { categoryName: string; month: string; existingLimit?: number };
   EditAsset: { assetId: string };
+  Settings: undefined;
+  CategoriesNav: undefined;
+  SMSInbox: undefined;
 };
 
 export type BottomTabParamList = {
