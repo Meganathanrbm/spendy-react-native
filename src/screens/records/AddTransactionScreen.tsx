@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Alert,
   Platform,
 } from "react-native";
@@ -24,8 +23,6 @@ import { useSaveTransaction } from "../../hooks/useTransactions";
 import { useAccounts } from "../../hooks/useAccounts";
 import { RootStackParamList } from "../../navigation/types";
 import { Transaction, TransactionType, Account, Category } from "../../types";
-import { layout } from "../../theme/spacing";
-import { formatDate } from "../../lib/helpers/date";
 
 import TypeToggle from "../../components/transaction/TypeToggle";
 import AccountPicker from "../../components/transaction/AccountPicker";
@@ -52,9 +49,7 @@ export default function AddTransactionScreen() {
   const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null,
-  );
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -70,7 +65,7 @@ export default function AddTransactionScreen() {
     }
   }, [accounts]);
 
-  // Active color by type
+  // Accent color changes per type (used only for calculator + amount display)
   const accentColor =
     type === "income"
       ? colors.income
@@ -113,19 +108,14 @@ export default function AddTransactionScreen() {
     }
   };
 
-  const formattedDateTime = `${formatDate(date.toISOString())}  ${date.toLocaleTimeString(
-    "en-IN",
-    {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    },
-  )}`;
+  const handleBackspace = () => {
+    setAmount((v) => (v.length <= 1 ? "0" : v.slice(0, -1)));
+  };
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View
         style={[
           styles.header,
@@ -140,185 +130,133 @@ export default function AddTransactionScreen() {
           onPress={() => navigation.goBack()}
           style={styles.headerBtn}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
-          <Text
-            style={[
-              styles.headerBtnLabel,
-              { color: colors.text, fontSize: typography.size.base },
-            ]}
-          >
-            Cancel
+          <Ionicons name="close" size={20} color={colors.primary} />
+          <Text style={[styles.headerBtnLabel, { color: colors.primary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: typography.tracking.wide }]}>
+            CANCEL
           </Text>
         </TouchableOpacity>
-
-        <Text
-          style={[
-            styles.headerTitle,
-            {
-              color: colors.text,
-              fontSize: typography.size.md,
-              fontWeight: typography.weight.semibold,
-            },
-          ]}
-        >
-          New Transaction
-        </Text>
 
         <TouchableOpacity
           onPress={handleSave}
           disabled={saveMutation.isPending}
-          style={[
-            styles.headerBtn,
-            styles.saveBtn,
-            { backgroundColor: accentColor },
-          ]}
+          style={styles.headerBtn}
         >
-          <Ionicons name="checkmark" size={16} color="#fff" />
-          <Text
-            style={[
-              styles.headerBtnLabel,
-              { color: "#fff", fontWeight: typography.weight.semibold },
-            ]}
-          >
-            {saveMutation.isPending ? "Saving…" : "Save"}
+          <Ionicons name="checkmark" size={20} color={colors.primary} />
+          <Text style={[styles.headerBtnLabel, { color: colors.primary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: typography.tracking.wide }]}>
+            {saveMutation.isPending ? "SAVING…" : "SAVE"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      {/* ── Type toggle ── */}
+      <View style={{ paddingTop: 14 }}>
+        <TypeToggle value={type} onChange={setType} />
+      </View>
+
+      {/* ── Account + Category row ── */}
+      <View style={styles.pickerRow}>
+        <AccountPicker
+          label="ACCOUNT"
+          selectedId={selectedAccount?.id ?? null}
+          onSelect={setSelectedAccount}
+        />
+        <CategoryPicker
+          transactionType={type}
+          selectedName={selectedCategory?.name ?? null}
+          onSelect={setSelectedCategory}
+        />
+      </View>
+
+      {/* ── Description ── */}
+      <View
+        style={[
+          styles.descriptionBox,
+          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+        ]}
       >
-        {/* Type toggle */}
-        <View style={{ paddingTop: 16 }}>
-          <TypeToggle value={type} onChange={setType} />
-        </View>
-
-        {/* Account + Category row */}
-        <View style={styles.pickerRow}>
-          <AccountPicker
-            label="ACCOUNT"
-            selectedId={selectedAccount?.id ?? null}
-            onSelect={setSelectedAccount}
-          />
-          <CategoryPicker
-            transactionType={type}
-            selectedName={selectedCategory?.name ?? null}
-            onSelect={setSelectedCategory}
-          />
-        </View>
-
-        {/* Description */}
-        <View
+        <TextInput
+          placeholder="Description (optional)"
+          placeholderTextColor={colors.textMuted}
+          value={description}
+          onChangeText={setDescription}
           style={[
-            styles.descriptionBox,
-            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+            styles.descriptionInput,
+            { color: colors.text, fontSize: typography.size.base },
           ]}
+          maxLength={150}
+          multiline
+        />
+      </View>
+
+      {/* ── Amount display with backspace ── */}
+      <View
+        style={[
+          styles.amountRow,
+          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+        ]}
+      >
+        <Text
+          style={[
+            styles.amountText,
+            {
+              color: parseFloat(amount) > 0 ? accentColor : colors.textMuted,
+              fontSize: typography.size["4xl"],
+              fontWeight: typography.weight.bold,
+            },
+          ]}
+          adjustsFontSizeToFit
+          numberOfLines={1}
         >
-          <TextInput
-            placeholder="Description (optional)"
-            placeholderTextColor={colors.textMuted}
-            value={description}
-            onChangeText={setDescription}
-            style={[
-              styles.descriptionInput,
-              { color: colors.text, fontSize: typography.size.base },
-            ]}
-            maxLength={100}
-            multiline
-          />
-        </View>
+          {amount === "0" ? "0.00" : amount}
+        </Text>
+        <TouchableOpacity onPress={handleBackspace} style={styles.backspaceBtn}>
+          <Ionicons name="backspace-outline" size={24} color={accentColor} />
+        </TouchableOpacity>
+      </View>
 
-        {/* Amount display */}
-        <View style={styles.amountDisplay}>
-          <Text
-            style={[
-              styles.amountText,
-              {
-                color: parseFloat(amount) > 0 ? accentColor : colors.textMuted,
-                fontSize: typography.size["4xl"],
-                fontWeight: typography.weight.bold,
-              },
-            ]}
-            adjustsFontSizeToFit
-            numberOfLines={1}
-          >
-            ₹ {amount === "0" ? "0.00" : amount}
-          </Text>
-        </View>
-
-        {/* Calculator */}
+      {/* ── Calculator (fills remaining space) ── */}
+      <View style={styles.calculatorWrapper}>
         <Calculator
           value={amount}
           onChange={setAmount}
           accentColor={accentColor}
         />
+      </View>
 
-        {/* Date / Time row */}
-        <View style={[styles.dateRow, { borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={[
-              styles.datePill,
-              {
-                backgroundColor: colors.surfaceAlt,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name="calendar-outline"
-              size={14}
-              color={colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.datePillText,
-                { color: colors.text, fontSize: typography.size.sm },
-              ]}
-            >
-              {date.toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </Text>
-          </TouchableOpacity>
+      {/* ── Date / Time row ── */}
+      <View
+        style={[
+          styles.dateRow,
+          {
+            borderTopColor: colors.border,
+            paddingBottom: insets.bottom + 10,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => setShowDatePicker(true)}
+          style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+        >
+          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
+            {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setShowTimePicker(true)}
-            style={[
-              styles.datePill,
-              {
-                backgroundColor: colors.surfaceAlt,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name="time-outline"
-              size={14}
-              color={colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.datePillText,
-                { color: colors.text, fontSize: typography.size.sm },
-              ]}
-            >
-              {date.toLocaleTimeString("en-IN", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-      </ScrollView>
+        <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
 
-      {/* Date / Time Pickers */}
+        <TouchableOpacity
+          onPress={() => setShowTimePicker(true)}
+          style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+        >
+          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
+            {date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Date / Time Pickers ── */}
       {showDatePicker && (
         <DateTimePicker
           value={date}
@@ -347,62 +285,79 @@ export default function AddTransactionScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: {},
   headerBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
   },
   headerBtnLabel: {},
-  saveBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
+
   pickerRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
     gap: 10,
-    marginBottom: 12,
+    marginBottom: 10,
   },
+
   descriptionBox: {
     marginHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 6,
     marginBottom: 8,
   },
   descriptionInput: {
-    height: 100,
+    height: 110,
     padding: 0,
+    textAlignVertical: "top",
   },
-  amountDisplay: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    alignItems: "flex-end",
+
+  amountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 10,
   },
   amountText: {
+    flex: 1,
     letterSpacing: -1,
   },
+  backspaceBtn: {
+    paddingLeft: 12,
+  },
+
+  calculatorWrapper: {
+    flex: 1,
+    minHeight: 220,
+  },
+
   dateRow: {
     flexDirection: "row",
-    gap: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 8,
-    flexWrap: "wrap",
+  },
+  dateDivider: {
+    width: 1,
+    height: 16,
   },
   datePill: {
     flexDirection: "row",
