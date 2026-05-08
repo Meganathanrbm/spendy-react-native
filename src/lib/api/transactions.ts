@@ -53,6 +53,13 @@ export const fetchTransactionsByMonth = async (month: string): Promise<Transacti
   return all.filter((t) => t.date.startsWith(month));
 };
 
+export const fetchTransactionsByPeriod = async (days: number): Promise<Transaction[]> => {
+  const all = await fetchTransactions();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return all.filter((t) => new Date(t.date) >= cutoff);
+};
+
 export const groupTransactionsByDate = (
   transactions: Transaction[]
 ): { date: string; items: Transaction[] }[] => {
@@ -62,5 +69,10 @@ export const groupTransactionsByDate = (
     if (!map.has(day)) map.set(day, []);
     map.get(day)!.push(tx);
   }
-  return Array.from(map.entries()).map(([date, items]) => ({ date, items }));
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a)) // newest date first
+    .map(([date, items]) => ({
+      date,
+      items: [...items].sort((a, b) => b.date.localeCompare(a.date)), // newest first within day
+    }));
 };

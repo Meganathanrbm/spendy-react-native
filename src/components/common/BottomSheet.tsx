@@ -1,12 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
   Modal,
   View,
-  Animated,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  PanResponder,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../hooks/useTheme";
@@ -17,7 +15,7 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  maxHeight?: number; // fraction of screen, e.g. 0.75
+  maxHeight?: number;
 };
 
 export default function BottomSheet({
@@ -28,69 +26,30 @@ export default function BottomSheet({
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(SCREEN_H)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 200,
-      }).start();
-    } else {
-      Animated.timing(translateY, {
-        toValue: SCREEN_H,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible]);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 8,
-      onPanResponderMove: (_, g) => {
-        if (g.dy > 0) translateY.setValue(g.dy);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 20,
-            stiffness: 200,
-          }).start();
-        }
-      },
-    })
-  ).current;
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
-      {/* Backdrop */}
+    <Modal
+      transparent
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-
-      {/* Sheet */}
-      <Animated.View
+      <View
         style={[
           styles.sheet,
           {
             backgroundColor: colors.surface,
             maxHeight: SCREEN_H * maxHeight,
             paddingBottom: insets.bottom + 8,
-            transform: [{ translateY }],
           },
         ]}
       >
-        {/* Drag handle */}
-        <View {...panResponder.panHandlers} style={styles.handleArea}>
+        <View style={styles.handleArea}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
         </View>
         {children}
-      </Animated.View>
+      </View>
     </Modal>
   );
 }

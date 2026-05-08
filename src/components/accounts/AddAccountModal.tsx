@@ -14,7 +14,11 @@ import { Ionicons } from "@expo/vector-icons";
 import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
-import { useSaveAccount, useUpdateAccount } from "../../hooks/useAccounts";
+import {
+  useSaveAccount,
+  useUpdateAccount,
+  useDeleteAccount,
+} from "../../hooks/useAccounts";
 import { Account, AccountType } from "../../types";
 import { layout } from "../../theme/spacing";
 import BottomSheet from "../common/BottomSheet";
@@ -26,26 +30,47 @@ type Props = {
 };
 
 const ACCOUNT_TYPES: { key: AccountType; label: string; icon: string }[] = [
-  { key: "savings",    label: "Savings",    icon: "🏦" },
-  { key: "current",   label: "Current",    icon: "🏧" },
-  { key: "credit",    label: "Credit Card",icon: "💳" },
-  { key: "wallet",    label: "Wallet",     icon: "👜" },
-  { key: "cash",      label: "Cash",       icon: "💵" },
-  { key: "investment",label: "Investment", icon: "📈" },
+  { key: "savings", label: "Savings", icon: "🏦" },
+  { key: "current", label: "Current", icon: "🏧" },
+  { key: "credit", label: "Credit Card", icon: "💳" },
+  { key: "wallet", label: "Wallet", icon: "👜" },
+  { key: "cash", label: "Cash", icon: "💵" },
+  { key: "investment", label: "Investment", icon: "📈" },
 ];
 
 const PRESET_COLORS = [
-  "#2D6A4F", "#40916C", "#E63946", "#457B9D",
-  "#F59E0B", "#8B5CF6", "#06B6D4", "#EC4899",
-  "#F97316", "#6366F1", "#10B981", "#64748B",
+  "#2D6A4F",
+  "#40916C",
+  "#E63946",
+  "#457B9D",
+  "#F59E0B",
+  "#8B5CF6",
+  "#06B6D4",
+  "#EC4899",
+  "#F97316",
+  "#6366F1",
+  "#10B981",
+  "#64748B",
 ];
 
-const PRESET_ICONS = ["🏦", "🏧", "💳", "👜", "💵", "📈", "💰", "🏠", "📊", "🎯"];
+const PRESET_ICONS = [
+  "🏦",
+  "🏧",
+  "💳",
+  "👜",
+  "💵",
+  "📈",
+  "💰",
+  "🏠",
+  "📊",
+  "🎯",
+];
 
 export default function AddAccountModal({ visible, onClose, existing }: Props) {
   const { colors, typography } = useTheme();
   const saveMutation = useSaveAccount();
   const updateMutation = useUpdateAccount();
+  const deleteMutation = useDeleteAccount();
 
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("savings");
@@ -67,9 +92,14 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
       setLastFour(existing.lastFourDigits ?? "");
       setIsPrimary(existing.isPrimary);
     } else if (visible && !existing) {
-      setName(""); setType("savings"); setBalance("0");
-      setIcon("🏦"); setColor(PRESET_COLORS[0]);
-      setBankName(""); setLastFour(""); setIsPrimary(false);
+      setName("");
+      setType("savings");
+      setBalance("0");
+      setIcon("🏦");
+      setColor(PRESET_COLORS[0]);
+      setBankName("");
+      setLastFour("");
+      setIsPrimary(false);
     }
   }, [visible, existing]);
 
@@ -101,15 +131,49 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
     onClose();
   };
 
+  const handleDelete = () => {
+    if (!existing) return;
+    Alert.alert(
+      "Delete Account",
+      `Are you sure you want to delete "${existing.name}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteMutation.mutateAsync(existing.id);
+            onClose();
+          },
+        },
+      ],
+    );
+  };
+
   const isSaving = saveMutation.isPending || updateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
 
   return (
     <BottomSheet visible={visible} onClose={onClose} maxHeight={0.9}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Title */}
           <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: colors.text, fontSize: typography.size.xl, fontWeight: typography.weight.bold }]}>
+            <Text
+              style={[
+                styles.title,
+                {
+                  color: colors.text,
+                  fontSize: typography.size.xl,
+                  fontWeight: typography.weight.bold,
+                },
+              ]}
+            >
               {existing ? "Edit Account" : "New Account"}
             </Text>
             <TouchableOpacity onPress={onClose}>
@@ -118,8 +182,14 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
           </View>
 
           {/* Icon picker */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>ICON</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iconRow}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            ICON
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.iconRow}
+          >
             {PRESET_ICONS.map((ic) => (
               <TouchableOpacity
                 key={ic}
@@ -127,7 +197,8 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                 style={[
                   styles.iconOption,
                   {
-                    backgroundColor: icon === ic ? color + "33" : colors.surfaceAlt,
+                    backgroundColor:
+                      icon === ic ? color + "33" : colors.surfaceAlt,
                     borderColor: icon === ic ? color : colors.border,
                     borderWidth: icon === ic ? 2 : 1,
                   },
@@ -139,7 +210,9 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
           </ScrollView>
 
           {/* Color picker */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>COLOR</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            COLOR
+          </Text>
           <View style={styles.colorGrid}>
             {PRESET_COLORS.map((c) => (
               <TouchableOpacity
@@ -151,25 +224,42 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                   color === c && styles.colorSwatchActive,
                 ]}
               >
-                {color === c && <Ionicons name="checkmark" size={14} color="#fff" />}
+                {color === c && (
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                )}
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Account name */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>ACCOUNT NAME</Text>
-          <View style={[styles.inputBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            ACCOUNT NAME
+          </Text>
+          <View
+            style={[
+              styles.inputBox,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <TextInput
               placeholder="e.g. HDFC Savings"
               placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={setName}
-              style={[styles.input, { color: colors.text, fontSize: typography.size.base }]}
+              style={[
+                styles.input,
+                { color: colors.text, fontSize: typography.size.base },
+              ]}
             />
           </View>
 
           {/* Account type */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>TYPE</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            TYPE
+          </Text>
           <View style={styles.typeGrid}>
             {ACCOUNT_TYPES.map((t) => {
               const active = type === t.key;
@@ -180,7 +270,9 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                   style={[
                     styles.typeChip,
                     {
-                      backgroundColor: active ? color + "22" : colors.surfaceAlt,
+                      backgroundColor: active
+                        ? color + "22"
+                        : colors.surfaceAlt,
                       borderColor: active ? color : colors.border,
                       borderWidth: active ? 1.5 : 1,
                     },
@@ -188,7 +280,18 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                   activeOpacity={0.7}
                 >
                   <Text style={{ fontSize: 16 }}>{t.icon}</Text>
-                  <Text style={[styles.typeLabel, { color: active ? color : colors.text, fontSize: typography.size.xs, fontWeight: active ? typography.weight.semibold : typography.weight.regular }]}>
+                  <Text
+                    style={[
+                      styles.typeLabel,
+                      {
+                        color: active ? color : colors.text,
+                        fontSize: typography.size.xs,
+                        fontWeight: active
+                          ? typography.weight.semibold
+                          : typography.weight.regular,
+                      },
+                    ]}
+                  >
                     {t.label}
                   </Text>
                 </TouchableOpacity>
@@ -197,35 +300,88 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
           </View>
 
           {/* Opening balance */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>OPENING BALANCE</Text>
-          <View style={[styles.inputBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-            <Text style={[{ color: colors.primary, fontSize: typography.size.md, fontWeight: typography.weight.bold, marginRight: 4 }]}>₹</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            OPENING BALANCE
+          </Text>
+          <View
+            style={[
+              styles.inputBox,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                {
+                  color: colors.primary,
+                  fontSize: typography.size.md,
+                  fontWeight: typography.weight.bold,
+                  marginRight: 4,
+                },
+              ]}
+            >
+              ₹
+            </Text>
             <TextInput
               placeholder="0.00"
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               value={balance}
               onChangeText={setBalance}
-              style={[styles.input, { color: colors.text, fontSize: typography.size.base }]}
+              style={[
+                styles.input,
+                { color: colors.text, fontSize: typography.size.base },
+              ]}
             />
           </View>
 
           {/* Bank name (for SMS matching) */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>BANK NAME <Text style={{ color: colors.textMuted, fontWeight: "400" }}>(for SMS auto-detect)</Text></Text>
-          <View style={[styles.inputBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            BANK NAME{" "}
+            <Text style={{ color: colors.textMuted, fontWeight: "400" }}>
+              (for SMS auto-detect)
+            </Text>
+          </Text>
+          <View
+            style={[
+              styles.inputBox,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <TextInput
               placeholder="e.g. HDFC, SBI, ICICI"
               placeholderTextColor={colors.textMuted}
               value={bankName}
               onChangeText={setBankName}
               autoCapitalize="characters"
-              style={[styles.input, { color: colors.text, fontSize: typography.size.base }]}
+              style={[
+                styles.input,
+                { color: colors.text, fontSize: typography.size.base },
+              ]}
             />
           </View>
 
           {/* Last 4 digits */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>LAST 4 DIGITS <Text style={{ color: colors.textMuted, fontWeight: "400" }}>(optional)</Text></Text>
-          <View style={[styles.inputBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            LAST 4 DIGITS{" "}
+            <Text style={{ color: colors.textMuted, fontWeight: "400" }}>
+              (optional)
+            </Text>
+          </Text>
+          <View
+            style={[
+              styles.inputBox,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <TextInput
               placeholder="e.g. 4321"
               placeholderTextColor={colors.textMuted}
@@ -233,14 +389,23 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
               maxLength={4}
               value={lastFour}
               onChangeText={setLastFour}
-              style={[styles.input, { color: colors.text, fontSize: typography.size.base }]}
+              style={[
+                styles.input,
+                { color: colors.text, fontSize: typography.size.base },
+              ]}
             />
           </View>
 
           {/* Primary toggle */}
           <TouchableOpacity
             onPress={() => setIsPrimary((v) => !v)}
-            style={[styles.primaryToggle, { backgroundColor: colors.surfaceAlt, borderColor: isPrimary ? color : colors.border }]}
+            style={[
+              styles.primaryToggle,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: isPrimary ? color : colors.border,
+              },
+            ]}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -248,7 +413,16 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
               size={18}
               color={isPrimary ? color : colors.textMuted}
             />
-            <Text style={[styles.primaryToggleLabel, { color: isPrimary ? color : colors.text, fontSize: typography.size.base, fontWeight: typography.weight.medium }]}>
+            <Text
+              style={[
+                styles.primaryToggleLabel,
+                {
+                  color: isPrimary ? color : colors.text,
+                  fontSize: typography.size.base,
+                  fontWeight: typography.weight.medium,
+                },
+              ]}
+            >
               Set as primary account
             </Text>
           </TouchableOpacity>
@@ -260,10 +434,45 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
             style={[styles.saveBtn, { backgroundColor: color }]}
             activeOpacity={0.85}
           >
-            <Text style={[styles.saveBtnText, { fontSize: typography.size.md, fontWeight: typography.weight.semibold }]}>
-              {isSaving ? "Saving…" : existing ? "Update Account" : "Add Account"}
+            <Text
+              style={[
+                styles.saveBtnText,
+                {
+                  fontSize: typography.size.md,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              {isSaving
+                ? "Saving…"
+                : existing
+                  ? "Update Account"
+                  : "Add Account"}
             </Text>
           </TouchableOpacity>
+
+          {/* Delete (edit mode only) */}
+          {existing && (
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={isDeleting || isSaving}
+              style={[styles.deleteBtn, { opacity: isDeleting ? 0.6 : 1 }]}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trash-outline" size={18} color="#E63946" />
+              <Text
+                style={[
+                  styles.deleteBtnText,
+                  {
+                    fontSize: typography.size.md,
+                    fontWeight: typography.weight.semibold,
+                  },
+                ]}
+              >
+                {isDeleting ? "Deleting…" : "Delete Account"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </BottomSheet>
@@ -360,4 +569,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { color: "#fff" },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom:28,
+    borderRadius: 14,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: "#E63946",
+  },
+  deleteBtnText: { color: "#E63946" },
 });

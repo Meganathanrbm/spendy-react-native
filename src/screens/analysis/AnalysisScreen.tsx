@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -64,8 +64,30 @@ export default function AnalysisScreen() {
     [categoryStats]
   );
 
-  const toggleSection = (s: Section) =>
-    setExpandedSection((prev) => (prev === s ? "overview" : s));
+  const toggleSection = useCallback((s: Section) =>
+    setExpandedSection((prev) => (prev === s ? "overview" : s)),
+  []);
+
+  const financialHealth = useMemo(() => {
+    const net = income - expense;
+    const savingsRate = income > 0 ? Math.round((net / income) * 100) : 0;
+    const spentPct = income > 0
+      ? Math.min(100, Math.round((expense / income) * 100))
+      : expense > 0 ? 100 : 0;
+    const healthLabel =
+      savingsRate >= 30 ? "Excellent savings" :
+      savingsRate >= 20 ? "Good savings" :
+      savingsRate >= 10 ? "Saving a little" :
+      savingsRate >= 0  ? "Breaking even" :
+                          "Overspent";
+    const healthColor =
+      savingsRate >= 20 ? colors.income :
+      savingsRate >= 0  ? "#F59E0B" :
+                          colors.expense;
+    return { net, savingsRate, spentPct, healthLabel, healthColor };
+  }, [income, expense, colors.income, colors.expense]);
+
+  const { net, savingsRate, spentPct, healthLabel, healthColor } = financialHealth;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -191,72 +213,87 @@ export default function AnalysisScreen() {
           )}
         </View>
 
-        {/* ── Income vs Expense card ───────────────────────────────── */}
+        {/* ── Financial Health ─────────────────────────────────────── */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold, paddingHorizontal: 16, paddingBottom: 12 }]}>
-            INCOME vs EXPENSE
+          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14 }]}>
+            FINANCIAL HEALTH
           </Text>
 
-          <View style={styles.compareRow}>
-            {/* Income bar */}
-            <View style={styles.compareCol}>
-              <Text style={[styles.compareLabel, { color: colors.income, fontSize: typography.size.xs }]}>
-                INCOME
+          {income === 0 && expense === 0 ? (
+            <View style={styles.emptyChart}>
+              <Text style={{ fontSize: 36 }}>💡</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No transactions this month
               </Text>
-              <Text style={[styles.compareAmount, { color: colors.income, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>
-                {formatCurrency(income, { compact: true })}
-              </Text>
-              <View style={[styles.compareBarBg, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.compareBarFill,
-                    {
-                      height: income + expense > 0 ? `${(income / (income + expense)) * 100}%` : "0%",
-                      backgroundColor: colors.income,
-                    },
-                  ]}
-                />
+            </View>
+          ) : (
+            <View style={styles.healthBody}>
+              {/* Savings rate badge + stats row */}
+              <View style={styles.healthTopRow}>
+                {/* Big savings rate */}
+                <View style={[styles.rateBox, { backgroundColor: healthColor + "18", borderColor: healthColor + "40" }]}>
+                  <Text style={[styles.ratePct, { color: healthColor, fontSize: typography.size["2xl"] ?? 24, fontWeight: typography.weight.extrabold }]}>
+                    {savingsRate >= 0 ? "+" : ""}{savingsRate}%
+                  </Text>
+                  <Text style={[styles.rateLabel, { color: healthColor, fontSize: typography.size.xs, fontWeight: typography.weight.medium }]}>
+                    {healthLabel}
+                  </Text>
+                </View>
+
+                {/* 3-stat grid */}
+                <View style={styles.statsGrid}>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statDot, { backgroundColor: colors.income }]} />
+                    <View>
+                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Income</Text>
+                      <Text style={[styles.statItemValue, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
+                        {formatCurrency(income, { compact: true })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statDot, { backgroundColor: colors.expense }]} />
+                    <View>
+                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Spent</Text>
+                      <Text style={[styles.statItemValue, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
+                        {formatCurrency(expense, { compact: true })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statDot, { backgroundColor: net >= 0 ? colors.income : colors.expense }]} />
+                    <View>
+                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Net saved</Text>
+                      <Text style={[styles.statItemValue, { color: net >= 0 ? colors.income : colors.expense, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
+                        {formatCurrency(net, { showSign: true, compact: true })}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Spend allocation bar */}
+              <View style={styles.allocationWrap}>
+                <View style={[styles.allocationTrack, { backgroundColor: colors.incomeLight ?? colors.border }]}>
+                  <View style={[styles.allocationFill, { width: `${spentPct}%`, backgroundColor: colors.expense }]} />
+                </View>
+                <View style={styles.allocationLabels}>
+                  <View style={styles.allocLabelRow}>
+                    <View style={[styles.allocDot, { backgroundColor: colors.expense }]} />
+                    <Text style={[styles.allocText, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                      {spentPct}% spent of income
+                    </Text>
+                  </View>
+                  <View style={styles.allocLabelRow}>
+                    <View style={[styles.allocDot, { backgroundColor: colors.income }]} />
+                    <Text style={[styles.allocText, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                      {Math.max(0, 100 - spentPct)}% retained
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
-
-            {/* Net */}
-            <View style={styles.netCol}>
-              <Text style={[styles.netLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>NET</Text>
-              <Text
-                style={[
-                  styles.netAmount,
-                  {
-                    color: income - expense >= 0 ? colors.income : colors.expense,
-                    fontSize: typography.size.md,
-                    fontWeight: typography.weight.bold,
-                  },
-                ]}
-              >
-                {formatCurrency(income - expense, { showSign: true, compact: true })}
-              </Text>
-            </View>
-
-            {/* Expense bar */}
-            <View style={styles.compareCol}>
-              <Text style={[styles.compareLabel, { color: colors.expense, fontSize: typography.size.xs }]}>
-                EXPENSE
-              </Text>
-              <Text style={[styles.compareAmount, { color: colors.expense, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>
-                {formatCurrency(expense, { compact: true })}
-              </Text>
-              <View style={[styles.compareBarBg, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.compareBarFill,
-                    {
-                      height: income + expense > 0 ? `${(expense / (income + expense)) * 100}%` : "0%",
-                      backgroundColor: colors.expense,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -311,40 +348,29 @@ const styles = StyleSheet.create({
   },
   legendLabel: { flex: 1 },
   legendMore: {},
-  compareRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    gap: 12,
-    height: 180,
-  },
-  compareCol: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-    height: "100%",
-    justifyContent: "flex-end",
-  },
-  compareLabel: { fontWeight: "700", letterSpacing: 0.5 },
-  compareAmount: {},
-  compareBarBg: {
-    width: "100%",
-    height: 80,
-    borderRadius: 8,
-    overflow: "hidden",
-    justifyContent: "flex-end",
-  },
-  compareBarFill: {
-    width: "100%",
-    borderRadius: 8,
-  },
-  netCol: {
+  healthBody: { paddingHorizontal: 16, paddingBottom: 20, gap: 16 },
+  healthTopRow: { flexDirection: "row", gap: 14, alignItems: "center" },
+  rateBox: {
+    width: 100,
+    height: 84,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 20,
-    gap: 4,
+    gap: 2,
   },
-  netLabel: { fontWeight: "600" },
-  netAmount: {},
+  ratePct: {},
+  rateLabel: { letterSpacing: 0.2 },
+  statsGrid: { flex: 1, gap: 10 },
+  statItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+  statDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  statItemLabel: {},
+  statItemValue: {},
+  allocationWrap: { gap: 8 },
+  allocationTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
+  allocationFill: { height: "100%", borderRadius: 4 },
+  allocationLabels: { flexDirection: "row", justifyContent: "space-between" },
+  allocLabelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  allocDot: { width: 6, height: 6, borderRadius: 3 },
+  allocText: {},
 });

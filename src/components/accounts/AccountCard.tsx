@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../hooks/useTheme";
@@ -8,9 +8,9 @@ import { layout } from "../../theme/spacing";
 
 type Props = {
   account: Account;
-  onSetPrimary: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onSetPrimary: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
 };
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -22,11 +22,16 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   investment: "Investment",
 };
 
-export default function AccountCard({ account, onSetPrimary, onEdit, onDelete }: Props) {
+const AccountCard = memo(function AccountCard({
+  account,
+  onSetPrimary,
+  onEdit,
+}: Props) {
   const { colors, typography } = useTheme();
 
   return (
-    <View
+    <TouchableOpacity
+      onPress={() => onEdit(account.id)}
       style={[
         styles.card,
         {
@@ -45,7 +50,9 @@ export default function AccountCard({ account, onSetPrimary, onEdit, onDelete }:
 
       <View style={styles.row}>
         {/* Icon */}
-        <View style={[styles.iconBox, { backgroundColor: account.color + "22" }]}>
+        <View
+          style={[styles.iconBox, { backgroundColor: account.color + "22" }]}
+        >
           <Text style={styles.iconText}>{account.icon}</Text>
         </View>
 
@@ -54,12 +61,21 @@ export default function AccountCard({ account, onSetPrimary, onEdit, onDelete }:
           <Text
             style={[
               styles.name,
-              { color: colors.text, fontSize: typography.size.md, fontWeight: typography.weight.semibold },
+              {
+                color: colors.text,
+                fontSize: typography.size.md,
+                fontWeight: typography.weight.semibold,
+              },
             ]}
           >
             {account.name}
           </Text>
-          <Text style={[styles.type, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+          <Text
+            style={[
+              styles.type,
+              { color: colors.textMuted, fontSize: typography.size.xs },
+            ]}
+          >
             {ACCOUNT_TYPE_LABELS[account.type] ?? account.type}
             {account.lastFourDigits ? `  ··${account.lastFourDigits}` : ""}
           </Text>
@@ -85,34 +101,32 @@ export default function AccountCard({ account, onSetPrimary, onEdit, onDelete }:
       {/* Action row */}
       <View style={[styles.actions, { borderTopColor: colors.divider }]}>
         {!account.isPrimary && (
-          <TouchableOpacity onPress={onSetPrimary} style={styles.actionBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => onSetPrimary(account.id)}
+            style={styles.actionBtn}
+            activeOpacity={0.7}
+          >
             <Ionicons name="star-outline" size={14} color={colors.primary} />
-            <Text style={[styles.actionLabel, { color: colors.primary, fontSize: typography.size.xs }]}>
+            <Text
+              style={[
+                styles.actionLabel,
+                { color: colors.primary, fontSize: typography.size.xs },
+              ]}
+            >
               Set Primary
             </Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={onEdit} style={styles.actionBtn} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.actionLabel, { color: colors.textSecondary, fontSize: typography.size.xs }]}>
-            Edit
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onDelete} style={styles.actionBtn} activeOpacity={0.7}>
-          <Ionicons name="trash-outline" size={14} color={colors.expense} />
-          <Text style={[styles.actionLabel, { color: colors.expense, fontSize: typography.size.xs }]}>
-            Delete
-          </Text>
-        </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-}
+});
+
+export default AccountCard;
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: layout.screenPadding,
-    marginBottom: 12,
+    marginBottom: 4,
     borderRadius: layout.cardRadius,
     overflow: "hidden",
   },

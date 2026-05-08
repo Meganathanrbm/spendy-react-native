@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Switch,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -51,7 +59,7 @@ export default function SettingsScreen() {
             Alert.alert("Done", "All data has been cleared.");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -132,23 +140,40 @@ export default function SettingsScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <AppHeader
         title="Settings"
+        rightElement={<></>}
         onMenuPress={() => navigation.goBack()}
       />
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {rows.map((row, i) => (
             <TouchableOpacity
               key={row.label}
               onPress={row.onPress}
-              disabled={!row.onPress && !row.rightElement}
+              disabled={!row.onPress}
               activeOpacity={0.7}
               style={[
                 styles.row,
                 { borderBottomColor: colors.divider },
-                i < rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth },
+                i < rows.length - 1 && {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                },
               ]}
             >
-              <View style={[styles.iconBox, { backgroundColor: row.danger ? colors.expenseLight : colors.surfaceAlt }]}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: row.danger
+                      ? colors.expenseLight
+                      : colors.surfaceAlt,
+                  },
+                ]}
+              >
                 <Ionicons
                   name={row.icon}
                   size={18}
@@ -156,18 +181,37 @@ export default function SettingsScreen() {
                 />
               </View>
               <View style={styles.rowInfo}>
-                <Text style={[styles.rowLabel, { color: row.danger ? colors.expense : colors.text, fontSize: typography.size.base, fontWeight: typography.weight.medium }]}>
+                <Text
+                  style={[
+                    styles.rowLabel,
+                    {
+                      color: row.danger ? colors.expense : colors.text,
+                      fontSize: typography.size.base,
+                      fontWeight: typography.weight.medium,
+                    },
+                  ]}
+                >
                   {row.label}
                 </Text>
                 {row.sublabel && (
-                  <Text style={[styles.rowSublabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                  <Text
+                    style={[
+                      styles.rowSublabel,
+                      { color: colors.textMuted, fontSize: typography.size.xs },
+                    ]}
+                  >
                     {row.sublabel}
                   </Text>
                 )}
               </View>
-              {row.rightElement ?? (
-                row.onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textMuted} /> : null
-              )}
+              {row.rightElement ??
+                (row.onPress ? (
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={colors.textMuted}
+                  />
+                ) : null)}
             </TouchableOpacity>
           ))}
         </View>
@@ -178,9 +222,20 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  card: { margin: 16, borderRadius: layout.cardRadius, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  card: {
+    margin: 16,
+    borderRadius: layout.cardRadius,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
   row: { flexDirection: "row", alignItems: "center", padding: 14, gap: 12 },
-  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   rowInfo: { flex: 1 },
   rowLabel: {},
   rowSublabel: { marginTop: 1 },

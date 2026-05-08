@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -47,13 +47,39 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
   const insets = useSafeAreaInsets();
   const translateX = useRef(new Animated.Value(-DRAWER_W)).current;
 
+  // Lazy mount: keep Modal out of the tree when closed so the hidden transparent
+  // Modal window (New Architecture / Fabric) does not swallow touch events.
+  const [shouldRender, setShouldRender] = useState(false);
+
+  // Grace period: prevents the tap that opened the drawer from immediately
+  // closing it via the backdrop (Fabric dispatches touch-end synchronously).
+  const [backdropEnabled, setBackdropEnabled] = useState(false);
+
   useEffect(() => {
-    Animated.spring(translateX, {
-      toValue: visible ? 0 : -DRAWER_W,
-      useNativeDriver: true,
-      damping: 22,
-      stiffness: 200,
-    }).start();
+    if (visible) {
+      setShouldRender(true);
+      const t = setTimeout(() => setBackdropEnabled(true), 200);
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 200,
+      }).start();
+      return () => clearTimeout(t);
+    } else {
+      setBackdropEnabled(false);
+      Animated.spring(translateX, {
+        toValue: -DRAWER_W,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 200,
+      }).start(({ finished }) => {
+        if (finished) {
+          setShouldRender(false);
+          translateX.setValue(-DRAWER_W);
+        }
+      });
+    }
   }, [visible]);
 
   const navigate = (screen: string) => {
@@ -133,14 +159,17 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
     },
   ];
 
-  const initials = user?.name
-    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : "SP";
+  if (!shouldRender) return null;
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       {/* Backdrop */}
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity
+        style={styles.backdrop}
+        activeOpacity={1}
+        onPress={onClose}
+        disabled={!backdropEnabled}
+      />
 
       {/* Drawer panel */}
       <Animated.View

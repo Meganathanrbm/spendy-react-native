@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency } from "../../lib/helpers/currency";
@@ -8,13 +8,13 @@ type Props = {
   expense: number;
 };
 
-export default function SummaryBar({ income, expense }: Props) {
+const SummaryBar = memo(function SummaryBar({ income, expense }: Props) {
   const { colors, typography } = useTheme();
   const net = income - expense;
 
   const items = [
-    { label: "EXPENSE", value: expense, color: colors.expense },
     { label: "INCOME",  value: income,  color: colors.income },
+    { label: "EXPENSE", value: expense, color: colors.expense },
     { label: "NET",     value: net,     color: net >= 0 ? colors.income : colors.expense },
   ];
 
@@ -60,7 +60,9 @@ export default function SummaryBar({ income, expense }: Props) {
       ))}
     </View>
   );
-}
+});
+
+export default SummaryBar;
 
 const styles = StyleSheet.create({
   container: {

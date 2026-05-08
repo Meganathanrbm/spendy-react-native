@@ -3,27 +3,28 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-
 import uuid from "react-native-uuid";
+
 import { useTheme } from "../../hooks/useTheme";
 import { useAccounts } from "../../hooks/useAccounts";
-import { useSaveTransaction } from "../../hooks/useTransactions";
+import { useSaveTransaction, useTransactionsByPeriod } from "../../hooks/useTransactions";
 import {
   fetchParsedBankTransactions,
   requestSMSPermission,
 } from "../../lib/helpers/smsService";
 import { formatCurrency } from "../../lib/helpers/currency";
-import { layout } from "../../theme/spacing";
 import { SMSDraft, Account } from "../../types";
+import { TouchableOpacity } from "react-native";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,17 +40,6 @@ function matchAccount(
         a.bankName.toLowerCase() === draft.parsedBank.toLowerCase() &&
         a.lastFourDigits === draft.parsedLastFour),
   );
-}
-
-function categoryForDraft(draft: SMSDraft): string {
-  if (draft.parsedType === "income") return "Income";
-  const m = draft.parsedMerchant?.toLowerCase() ?? "";
-  if (/swiggy|zomato|food|restaurant|cafe/i.test(m)) return "Food & Dining";
-  if (/petrol|fuel|gas/i.test(m)) return "Transport";
-  if (/amazon|flipkart|myntra|shop/i.test(m)) return "Shopping";
-  if (/netflix|spotify|prime|hotstar/i.test(m)) return "Entertainment";
-  if (/hospital|pharmacy|medical|clinic/i.test(m)) return "Healthcare";
-  return "Others";
 }
 
 // ─── Draft card ───────────────────────────────────────────────────────────────
@@ -73,155 +63,159 @@ const DraftCard = ({
 }: DraftCardProps) => {
   const isCredit = draft.parsedType === "income";
   const amountColor = isCredit ? colors.income : colors.expense;
+  const accentBg = isCredit ? colors.incomeLight : colors.expenseLight;
+  const category = draft.suggestedCategory ?? "Others";
+  const icon = draft.suggestedIcon ?? (isCredit ? "💰" : "💸");
+  const merchant =
+    draft.parsedMerchant ??
+    `${draft.parsedBank} ${isCredit ? "Credit" : "Debit"}`;
+
+  const dateStr = new Date(draft.parsedDate).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.border },
-      ]}
-    >
-      {/* Header row */}
-      <View style={styles.cardHeader}>
-        <View
-          style={[
-            styles.bankBadge,
-            {
-              backgroundColor: isCredit
-                ? colors.incomeLight
-                : colors.expenseLight,
-            },
-          ]}
-        >
-          <Ionicons
-            name={isCredit ? "arrow-down-circle" : "arrow-up-circle"}
-            size={16}
-            color={amountColor}
-          />
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      {/* ── Top strip: bank + type indicator ── */}
+      <View style={[styles.topStrip, { backgroundColor: accentBg }]}>
+        <View style={styles.topLeft}>
+          <View style={[styles.typeIcon, { backgroundColor: amountColor }]}>
+            <Ionicons
+              name={isCredit ? "arrow-down" : "arrow-up"}
+              size={10}
+              color="#fff"
+            />
+          </View>
           <Text
             style={[
-              styles.bankBadgeText,
-              {
-                color: amountColor,
-                fontSize: typography.size.xs,
-                fontWeight: typography.weight.semibold,
-              },
+              styles.bankName,
+              { color: amountColor, fontSize: typography.size.xs },
             ]}
           >
             {draft.parsedBank}
           </Text>
+          <Text
+            style={[
+              styles.typePill,
+              { color: amountColor, fontSize: typography.size.xs },
+            ]}
+          >
+            {isCredit ? "CREDIT" : "DEBIT"}
+          </Text>
         </View>
         <Text
           style={[
-            styles.amountText,
-            {
-              color: amountColor,
-              fontSize: typography.size.lg,
-              fontWeight: typography.weight.bold,
-            },
-          ]}
-        >
-          {isCredit ? "+" : "-"}
-          {formatCurrency(draft.parsedAmount)}
-        </Text>
-      </View>
-
-      {/* Merchant */}
-      {draft.parsedMerchant ? (
-        <Text
-          style={[
-            styles.merchantText,
-            {
-              color: colors.text,
-              fontSize: typography.size.base,
-              fontWeight: typography.weight.medium,
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {draft.parsedMerchant}
-        </Text>
-      ) : null}
-
-      {/* Meta row */}
-      <View style={styles.metaRow}>
-        {draft.parsedLastFour ? (
-          <View style={styles.metaChip}>
-            <Ionicons name="card-outline" size={12} color={colors.textMuted} />
-            <Text
-              style={[
-                styles.metaText,
-                { color: colors.textMuted, fontSize: typography.size.xs },
-              ]}
-            >
-              ••••{draft.parsedLastFour}
-            </Text>
-          </View>
-        ) : null}
-        {matchedAccount ? (
-          <View
-            style={[styles.metaChip, { backgroundColor: colors.primaryLight }]}
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={12}
-              color={colors.primary}
-            />
-            <Text
-              style={[
-                styles.metaText,
-                { color: colors.primary, fontSize: typography.size.xs },
-              ]}
-            >
-              {matchedAccount.name}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.metaChip}>
-            <Ionicons
-              name="help-circle-outline"
-              size={12}
-              color={colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.metaText,
-                { color: colors.textMuted, fontSize: typography.size.xs },
-              ]}
-            >
-              No account matched
-            </Text>
-          </View>
-        )}
-        <Text
-          style={[
-            styles.dateText,
+            styles.dateLabel,
             { color: colors.textMuted, fontSize: typography.size.xs },
           ]}
         >
-          {new Date(draft.parsedDate).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-          })}
+          {dateStr}
         </Text>
       </View>
 
-      {/* SMS preview */}
-      <Text
-        style={[
-          styles.smsPreview,
-          {
-            color: colors.textMuted,
-            fontSize: typography.size.xs,
-            borderTopColor: colors.divider,
-          },
-        ]}
-        numberOfLines={2}
-      >
-        {draft.rawSms}
-      </Text>
+      {/* ── Body ── */}
+      <View style={styles.body}>
+        {/* Merchant row */}
+        <View style={styles.merchantRow}>
+          <View style={[styles.iconCircle, { backgroundColor: accentBg }]}>
+            <Text style={styles.iconEmoji}>{icon}</Text>
+          </View>
+          <View style={styles.merchantInfo}>
+            <Text
+              style={[
+                styles.merchantName,
+                {
+                  color: colors.text,
+                  fontSize: typography.size.base,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {merchant}
+            </Text>
+            <Text
+              style={[
+                styles.categoryLabel,
+                { color: colors.textMuted, fontSize: typography.size.xs },
+              ]}
+            >
+              {category}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.amount,
+              {
+                color: amountColor,
+                fontSize: typography.size.xl,
+                fontWeight: typography.weight.bold,
+              },
+            ]}
+          >
+            {isCredit ? "+" : "−"}
+            {formatCurrency(draft.parsedAmount)}
+          </Text>
+        </View>
 
-      {/* Actions */}
+        {/* Account chip row */}
+        <View style={styles.chipRow}>
+          {matchedAccount ? (
+            <View
+              style={[styles.chip, { backgroundColor: colors.primaryMuted }]}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={11}
+                color={colors.primary}
+              />
+              <Text style={[styles.chipText, { color: colors.primary }]}>
+                {matchedAccount.name}
+              </Text>
+            </View>
+          ) : draft.parsedLastFour ? (
+            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+              <Ionicons
+                name="card-outline"
+                size={11}
+                color={colors.textMuted}
+              />
+              <Text style={[styles.chipText, { color: colors.textMuted }]}>
+                ••••{draft.parsedLastFour}
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+              <Ionicons
+                name="help-circle-outline"
+                size={11}
+                color={colors.textMuted}
+              />
+              <Text style={[styles.chipText, { color: colors.textMuted }]}>
+                No account matched
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* SMS preview */}
+        <Text
+          style={[
+            styles.smsText,
+            {
+              color: colors.textMuted,
+              borderTopColor: colors.divider,
+              fontSize: typography.size.xs,
+            },
+          ]}
+          numberOfLines={2}
+        >
+          {draft.rawSms}
+        </Text>
+      </View>
+
+      {/* ── Actions ── */}
       <View style={[styles.actions, { borderTopColor: colors.divider }]}>
         <TouchableOpacity
           onPress={onDismiss}
@@ -270,49 +264,59 @@ export default function SMSInboxScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { data: accounts = [] } = useAccounts();
+  const { data: existingTransactions = [] } = useTransactionsByPeriod();
   const saveTransaction = useSaveTransaction();
 
   const [drafts, setDrafts] = useState<SMSDraft[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  const handleFetch = useCallback(async () => {
-    setLoading(true);
+  const loadTransactions = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError(null);
+
     try {
       const granted = await requestSMSPermission();
       setHasPermission(granted);
       if (!granted) {
-        setError("SMS permission was denied. Please enable it in Settings.");
+        setError(
+          "SMS permission denied. Enable it in Settings → Apps → Spendy → Permissions.",
+        );
         return;
       }
-      const results = await fetchParsedBankTransactions(30);
+      const results = await fetchParsedBankTransactions(30, existingTransactions, accounts);
       setDrafts(results);
-      if (results.length === 0) {
-        setError("No bank transaction SMS found in the last 30 days.");
-      }
+      if (results.length === 0)
+        setError("No bank SMS found in the last 30 days.");
     } catch (e: any) {
       setError(e?.message ?? "Failed to read SMS.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [existingTransactions]);
 
   useEffect(() => {
-    if (Platform.OS === "android") {
-      handleFetch();
-    } else {
-      setError("SMS reading is only available on Android devices.");
-    }
-  }, [handleFetch]);
+    if (Platform.OS === "android") loadTransactions();
+    else setError("SMS reading is only available on Android devices.");
+  }, [loadTransactions]);
 
   const handleAccept = useCallback(
     async (draft: SMSDraft) => {
       const matched = matchAccount(draft, accounts);
-      const accountId = matched?.id ?? accounts[0]?.id ?? "default";
-      const category = categoryForDraft(draft);
+      const primary = accounts.find((a) => a.isPrimary) ?? accounts[0];
+      const account = matched ?? primary;
 
+      if (!account) {
+        Alert.alert(
+          "No Account",
+          "Create an account first before adding transactions.",
+        );
+        return;
+      }
       try {
         await saveTransaction.mutateAsync({
           id: uuid.v4() as string,
@@ -321,10 +325,12 @@ export default function SMSInboxScreen() {
             `${draft.parsedBank} ${draft.parsedType === "income" ? "Credit" : "Debit"}`,
           amount: draft.parsedAmount,
           type: draft.parsedType,
-          category,
+          category: draft.suggestedCategory ?? "Others",
           date: draft.parsedDate,
-          icon: draft.parsedType === "income" ? "💰" : "💸",
-          accountId,
+          icon:
+            draft.suggestedIcon ??
+            (draft.parsedType === "income" ? "💰" : "💸"),
+          accountId: account.id,
           isAutoDetected: true,
           smsSource: draft.parsedBank,
         });
@@ -336,43 +342,51 @@ export default function SMSInboxScreen() {
     [accounts, saveTransaction],
   );
 
-  const handleDismiss = useCallback((id: string) => {
-    setDrafts((prev) => prev.filter((d) => d.id !== id));
-  }, []);
-
+  const handleDismiss = useCallback(
+    (id: string) => setDrafts((p) => p.filter((d) => d.id !== id)),
+    [],
+  );
   const handleAcceptAll = useCallback(() => {
-    Alert.alert(
-      "Add All Transactions",
-      `Add all ${drafts.length} detected transactions?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Add All",
-          onPress: () => drafts.forEach((d) => handleAccept(d)),
+    if (!drafts.length) return;
+    Alert.alert("Add All", `Add all ${drafts.length} detected transactions?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Add All",
+        onPress: async () => {
+          const toProcess = [...drafts];
+          for (const draft of toProcess) {
+            await handleAccept(draft);
+          }
         },
-      ],
-    );
+      },
+    ]);
   }, [drafts, handleAccept]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View
         style={[
           styles.header,
           {
             backgroundColor: colors.surface,
             borderBottomColor: colors.border,
-            paddingTop: insets.top + 4,
+            paddingTop: insets.top + 8,
           },
         ]}
       >
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={styles.backBtn}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+
         <Text
           style={[
             styles.headerTitle,
@@ -385,13 +399,18 @@ export default function SMSInboxScreen() {
         >
           SMS Transactions
         </Text>
+
         {drafts.length > 0 ? (
-          <TouchableOpacity
+          <Pressable
             onPress={handleAcceptAll}
-            style={styles.headerAction}
+            style={({ pressed }) => [
+              styles.addAllBtn,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
           >
             <Text
               style={[
+                styles.addAllLabel,
                 {
                   color: colors.primary,
                   fontSize: typography.size.sm,
@@ -401,45 +420,40 @@ export default function SMSInboxScreen() {
             >
               Add All
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ) : (
-          <View style={{ width: 60 }} />
+          <View style={styles.iconBtn} />
         )}
       </View>
 
-      {/* Count banner */}
+      {/* ── Count banner ── */}
       {drafts.length > 0 && (
-        <View
-          style={[styles.countBanner, { backgroundColor: colors.primaryLight }]}
-        >
+        <View style={[styles.banner, { backgroundColor: colors.primaryMuted }]}>
           <Ionicons
-            name="chatbubble-ellipses"
-            size={16}
+            name="checkmark-done-circle-outline"
+            size={15}
             color={colors.primary}
           />
           <Text
             style={[
-              styles.countText,
+              styles.bannerText,
               { color: colors.primary, fontSize: typography.size.sm },
             ]}
           >
-            {drafts.length} transaction{drafts.length > 1 ? "s" : ""} detected
-            from last 30 days
+            {drafts.length} transaction{drafts.length !== 1 ? "s" : ""} detected
+            · last 30 days
           </Text>
         </View>
       )}
 
-      {/* States */}
+      {/* ── Loading ── */}
       {loading && (
-        <View style={styles.centered}>
+        <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text
             style={[
-              {
-                color: colors.textMuted,
-                marginTop: 12,
-                fontSize: typography.size.base,
-              },
+              styles.stateLabel,
+              { color: colors.textMuted, fontSize: typography.size.sm },
             ]}
           >
             Reading bank SMS…
@@ -447,68 +461,85 @@ export default function SMSInboxScreen() {
         </View>
       )}
 
+      {/* ── Error ── */}
       {!loading && error && (
-        <View style={styles.centered}>
-          <Ionicons
-            name="chatbubble-outline"
-            size={56}
-            color={colors.textMuted}
-          />
+        <View style={styles.center}>
+          <View
+            style={[styles.stateIcon, { backgroundColor: colors.surfaceAlt }]}
+          >
+            <Ionicons
+              name="mail-unread-outline"
+              size={32}
+              color={colors.textMuted}
+            />
+          </View>
           <Text
             style={[
-              styles.errorText,
+              styles.stateTitle,
               {
                 color: colors.text,
                 fontSize: typography.size.base,
-                fontWeight: typography.weight.medium,
+                fontWeight: typography.weight.semibold,
               },
+            ]}
+          >
+            {Platform.OS !== "android"
+              ? "Android Only"
+              : "Something went wrong"}
+          </Text>
+          <Text
+            style={[
+              styles.stateLabel,
+              { color: colors.textMuted, fontSize: typography.size.sm },
             ]}
           >
             {error}
           </Text>
           {Platform.OS === "android" && (
-            <TouchableOpacity
-              onPress={handleFetch}
-              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-            >
-              <Text style={{ color: "#fff", fontWeight: "600" }}>Retry</Text>
-            </TouchableOpacity>
-          )}
-          {Platform.OS !== "android" && (
-            <Text
-              style={[
-                {
-                  color: colors.textMuted,
-                  fontSize: typography.size.sm,
-                  marginTop: 8,
-                  textAlign: "center",
-                  paddingHorizontal: 32,
-                },
+            <Pressable
+              onPress={() => loadTransactions()}
+              style={({ pressed }) => [
+                styles.retryBtn,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
               ]}
             >
-              This feature is only available on Android. To enable on Android,
-              run{"\n"}
-              <Text style={{ fontWeight: "600" }}>npx expo prebuild</Text> and
-              build the app.
-            </Text>
+              <Ionicons name="refresh-outline" size={16} color="#fff" />
+              <Text
+                style={[
+                  styles.btnLabel,
+                  {
+                    color: "#fff",
+                    fontSize: typography.size.sm,
+                    fontWeight: typography.weight.semibold,
+                  },
+                ]}
+              >
+                Try Again
+              </Text>
+            </Pressable>
           )}
         </View>
       )}
 
+      {/* ── Empty state ── */}
       {!loading && !error && drafts.length === 0 && hasPermission && (
-        <View style={styles.centered}>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={56}
-            color={colors.income}
-          />
+        <View style={styles.center}>
+          <View
+            style={[styles.stateIcon, { backgroundColor: colors.incomeLight }]}
+          >
+            <Ionicons
+              name="checkmark-done-outline"
+              size={32}
+              color={colors.income}
+            />
+          </View>
           <Text
             style={[
+              styles.stateTitle,
               {
                 color: colors.text,
                 fontSize: typography.size.base,
-                fontWeight: typography.weight.medium,
-                marginTop: 12,
+                fontWeight: typography.weight.semibold,
               },
             ]}
           >
@@ -516,11 +547,8 @@ export default function SMSInboxScreen() {
           </Text>
           <Text
             style={[
-              {
-                color: colors.textMuted,
-                fontSize: typography.size.sm,
-                marginTop: 4,
-              },
+              styles.stateLabel,
+              { color: colors.textMuted, fontSize: typography.size.sm },
             ]}
           >
             No pending bank SMS transactions.
@@ -528,16 +556,28 @@ export default function SMSInboxScreen() {
         </View>
       )}
 
-      {/* Draft list */}
+      {/* ── List ── */}
       {!loading && drafts.length > 0 && (
         <FlatList
           data={drafts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
-            padding: 16,
-            paddingBottom: insets.bottom + 24,
+            paddingHorizontal: 14,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 28,
           }}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          removeClippedSubviews
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadTransactions(true)}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           renderItem={({ item }) => (
             <DraftCard
               draft={item}
@@ -554,96 +594,170 @@ export default function SMSInboxScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    height: layout.headerHeight + 44,
-    paddingHorizontal: layout.screenPadding,
+    paddingHorizontal: 12,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backBtn: {
+  iconBtn: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: { flex: 1, textAlign: "center" },
-  headerAction: { width: 60, alignItems: "flex-end" },
-  countBanner: {
+  addAllBtn: {
+    width: 64,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  addAllLabel: {},
+
+  // Banner
+  banner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
-  countText: { fontWeight: "500" },
-  centered: {
+  bannerText: { fontWeight: "500" },
+
+  // States
+  center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-  },
-  errorText: { marginTop: 16, textAlign: "center" },
-  retryBtn: {
-    marginTop: 20,
     paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
+    gap: 10,
   },
+  stateIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  stateTitle: {},
+  stateLabel: { textAlign: "center", lineHeight: 20 },
+  retryBtn: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+
+  // Card
   card: {
-    borderRadius: layout.cardRadius,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
     overflow: "hidden",
-    padding: 14,
-    gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+      },
+      android: { elevation: 3 },
+    }),
   },
-  cardHeader: {
+  topStrip: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  bankBadge: {
+  topLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  typeIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bankName: { fontWeight: "600", letterSpacing: 0.2 },
+  typePill: { fontWeight: "700", letterSpacing: 0.6, opacity: 0.7 },
+  dateLabel: { fontWeight: "400" },
+
+  body: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4, gap: 10 },
+
+  merchantRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconEmoji: { fontSize: 20 },
+  merchantInfo: { flex: 1, minWidth: 0 },
+  merchantName: { lineHeight: 20 },
+  categoryLabel: { marginTop: 1 },
+  amount: { flexShrink: 0, marginLeft: 8 },
+
+  chipRow: { flexDirection: "row", alignItems: "center" },
+  chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
   },
-  bankBadgeText: {},
-  amountText: {},
-  merchantText: {},
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  metaText: {},
-  dateText: { marginLeft: "auto" },
-  smsPreview: {
-    paddingTop: 8,
+  chipText: { fontSize: 11, fontWeight: "500" },
+
+  smsText: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    lineHeight: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    lineHeight: 17,
+    fontStyle: "italic",
   },
+
+  // Actions
   actions: {
     flexDirection: "row",
-    gap: 10,
-    paddingTop: 10,
+    alignItems: "center",
     borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
   },
+  dismissBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  dismissLabel: { fontWeight: "500" },
+  addBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  addLabel: { fontWeight: "600", letterSpacing: 0.3 },
+  btnLabel: { fontWeight: "500" },
   actionBtn: {
     flex: 1,
     flexDirection: "row",

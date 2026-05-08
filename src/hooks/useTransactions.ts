@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchTransactions,
   fetchTransactionsByMonth,
+  fetchTransactionsByPeriod,
   saveTransaction,
   deleteTransaction,
   clearAllTransactions,
@@ -17,6 +19,14 @@ export const useTransactionsByMonth = (month: string) =>
   useQuery({
     queryKey: [...TRANSACTIONS_KEY, month],
     queryFn: () => fetchTransactionsByMonth(month),
+    staleTime: 30_000,
+  });
+
+export const useTransactionsByPeriod = (days: number = 30) =>
+  useQuery({
+    queryKey: [...TRANSACTIONS_KEY, "period", days],
+    queryFn: () => fetchTransactionsByPeriod(days),
+    staleTime: 30_000,
   });
 
 export const useSaveTransaction = () => {
@@ -52,11 +62,13 @@ export const useClearTransactions = () => {
 // ─── Derived selectors ───────────────────────────────────────────────────────
 
 export const useMonthlySummary = (transactions: Transaction[]) => {
-  let income = 0;
-  let expense = 0;
-  for (const t of transactions) {
-    if (t.type === "income") income += t.amount;
-    else if (t.type === "expense") expense += t.amount;
-  }
-  return { income, expense, net: income - expense };
+  return useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      if (t.type === "income") income += t.amount;
+      else if (t.type === "expense") expense += t.amount;
+    }
+    return { income, expense, net: income - expense };
+  }, [transactions]);
 };

@@ -1,12 +1,13 @@
-import { Platform, PermissionsAndroid } from "react-native";
+import { Platform, PermissionsAndroid, InteractionManager } from "react-native";
 import { parseSMS, isBankSMS } from "./smsParser";
-import { SMSDraft } from "../../types";
+import { Account, SMSDraft, Transaction } from "../../types";
 
 // Safe dynamic require — won't crash in Expo Go
 let SmsAndroid: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  SmsAndroid = require("react-native-get-sms-android").default;
+  const mod = require("react-native-get-sms-android");
+  SmsAndroid = mod.default ?? mod;
 } catch (_) {
   // Not available (Expo Go or iOS)
 }
@@ -23,7 +24,7 @@ export async function requestSMSPermission(): Promise<boolean> {
         buttonNeutral: "Ask Me Later",
         buttonNegative: "Deny",
         buttonPositive: "Allow",
-      }
+      },
     );
     return result === PermissionsAndroid.RESULTS.GRANTED;
   } catch {
@@ -33,58 +34,105 @@ export async function requestSMSPermission(): Promise<boolean> {
 
 export type RawSMS = {
   _id: string;
-  address: string;  // sender
+  address: string;
   body: string;
-  date: string;     // ms timestamp
+  date: string;
   date_sent: string;
 };
 
-// Fetch last `maxCount` bank SMS messages from the last `daysBack` days
-export function fetchBankSMS(
-  daysBack = 30,
-  maxCount = 200
-): Promise<RawSMS[]> {
+export function fetchBankSMS(daysBack = 30, maxCount = 500): Promise<RawSMS[]> {
   return new Promise((resolve, reject) => {
     if (!SmsAndroid) {
-      reject(new Error("SMS reading not available. Run 'npx expo prebuild' and build for Android."));
+      reject(
+        new Error(
+          "SMS reading not available on this build.\n" +
+            "Run 'npx expo prebuild' and build a native Android APK/AAB.",
+        ),
+      );
       return;
     }
+
     const minDate = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+
     SmsAndroid.list(
-      JSON.stringify({
-        box: "inbox",
-        minDate,
-        maxCount,
-      }),
+      JSON.stringify({ box: "inbox", minDate, maxCount }),
       (fail: string) => reject(new Error(fail)),
       (_count: number, smsList: string) => {
         try {
           const messages: RawSMS[] = JSON.parse(smsList);
-          resolve(messages);
+          resolve(Array.isArray(messages) ? messages : []);
         } catch {
           resolve([]);
         }
-      }
+      },
     );
   });
 }
 
+const PARSE_CHUNK_SIZE = 50;
+
+/**
+ * Fetch, filter, and parse bank transaction SMS into SMSDraft objects.
+ * Parsing is chunked with setImmediate yields so the JS thread doesn't
+ * block the UI — touches and animations stay responsive during processing.
+ */
 export async function fetchParsedBankTransactions(
-  daysBack = 30
+  daysBack = 30,
+  existingTransactions: Transaction[] = [],
+  accounts: Account[] = [],
 ): Promise<SMSDraft[]> {
   const raw = await fetchBankSMS(daysBack);
+
+  // Yield to UI before starting heavy regex work
+  await new Promise<void>((resolve) =>
+    InteractionManager.runAfterInteractions(() => resolve()),
+  );
+
+  const seenBodies = new Set<string>();
   const drafts: SMSDraft[] = [];
-  for (const msg of raw) {
-    if (!isBankSMS(msg.address, msg.body)) continue;
-    const parsed = parseSMS(
-      msg.body,
-      msg.address,
-      new Date(parseInt(msg.date, 10)).toISOString()
-    );
-    if (parsed) drafts.push(parsed);
+
+  for (let i = 0; i < raw.length; i += PARSE_CHUNK_SIZE) {
+    const chunk = raw.slice(i, i + PARSE_CHUNK_SIZE);
+
+    for (const msg of chunk) {
+      const body = msg.body?.trim();
+      if (!body) continue;
+      if (seenBodies.has(body)) continue;
+      seenBodies.add(body);
+
+      if (!isBankSMS(msg.address, body)) continue;
+
+      const parsed = parseSMS(
+        body,
+        msg.address,
+        new Date(parseInt(msg.date, 10)).toISOString(),
+      );
+      if (parsed) drafts.push(parsed);
+    }
+
+    // Yield between chunks so touches/animations can process
+    if (i + PARSE_CHUNK_SIZE < raw.length) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
   }
-  // Most recent first
-  return drafts.sort(
-    (a, b) => new Date(b.parsedDate).getTime() - new Date(a.parsedDate).getTime()
+  const filtered = drafts.filter((d) => {
+    const matchedAccount = accounts.find(
+      (a) =>
+        a.lastFourDigits === d.parsedLastFour &&
+        (!a.bankName || a.bankName.toLowerCase() === d.parsedBank.toLowerCase()),
+    );
+
+    return !existingTransactions.some(
+      (t) =>
+        t.amount === d.parsedAmount &&
+        t.type === d.parsedType &&
+        t.date.slice(0, 10) === d.parsedDate.slice(0, 10)  &&
+        (!matchedAccount || t.accountId === matchedAccount.id),
+    );
+  });
+
+  return filtered.sort(
+    (a, b) =>
+      new Date(b.parsedDate).getTime() - new Date(a.parsedDate).getTime(),
   );
 }

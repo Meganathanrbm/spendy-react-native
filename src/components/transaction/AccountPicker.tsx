@@ -35,7 +35,12 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
         ]}
         activeOpacity={0.75}
       >
-        <Text style={[styles.triggerLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+        <Text
+          style={[
+            styles.triggerLabel,
+            { color: colors.textMuted, fontSize: typography.size.xs },
+          ]}
+        >
           {label}
         </Text>
         <View style={styles.triggerValue}>
@@ -45,7 +50,11 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
               <Text
                 style={[
                   styles.valueName,
-                  { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.medium },
+                  {
+                    color: colors.text,
+                    fontSize: typography.size.base,
+                    fontWeight: typography.weight.medium,
+                  },
                 ]}
                 numberOfLines={1}
               >
@@ -53,19 +62,31 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
               </Text>
             </>
           ) : (
-            <Text style={[styles.valueName, { color: colors.textMuted, fontSize: typography.size.base }]}>
+            <Text
+              style={[
+                styles.valueName,
+                { color: colors.textMuted, fontSize: typography.size.base },
+              ]}
+            >
               Select…
             </Text>
           )}
           <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
         </View>
       </TouchableOpacity>
-
-      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={0.55}>
+      <BottomSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        maxHeight={0.55}
+      >
         <Text
           style={[
             styles.sheetTitle,
-            { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.bold },
+            {
+              color: colors.text,
+              fontSize: typography.size.lg,
+              fontWeight: typography.weight.bold,
+            },
           ]}
         >
           Select Account
@@ -77,29 +98,56 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
             const isSelected = item.id === selectedId;
             return (
               <TouchableOpacity
-                onPress={() => { onSelect(item); setOpen(false); }}
+                onPress={() => {
+                  onSelect(item);
+                  setOpen(false);
+                }}
                 style={[
                   styles.option,
                   {
                     borderBottomColor: colors.divider,
-                    backgroundColor: isSelected ? colors.primaryMuted : "transparent",
+                    backgroundColor: isSelected
+                      ? colors.primaryMuted
+                      : "transparent",
                   },
                 ]}
                 activeOpacity={0.7}
               >
-                <View style={[styles.optionIcon, { backgroundColor: item.color + "22" }]}>
+                <View
+                  style={[
+                    styles.optionIcon,
+                    { backgroundColor: item.color + "22" },
+                  ]}
+                >
                   <Text style={{ fontSize: 18 }}>{item.icon}</Text>
                 </View>
                 <View style={styles.optionInfo}>
-                  <Text style={[styles.optionName, { color: colors.text, fontWeight: typography.weight.medium }]}>
+                  <Text
+                    style={[
+                      styles.optionName,
+                      {
+                        color: colors.text,
+                        fontWeight: typography.weight.medium,
+                      },
+                    ]}
+                  >
                     {item.name}
                   </Text>
-                  <Text style={[styles.optionType, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                  <Text
+                    style={[
+                      styles.optionType,
+                      { color: colors.textMuted, fontSize: typography.size.xs },
+                    ]}
+                  >
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                   </Text>
                 </View>
                 {isSelected && (
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={colors.primary}
+                  />
                 )}
               </TouchableOpacity>
             );

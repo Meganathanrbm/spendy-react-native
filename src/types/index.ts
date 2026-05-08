@@ -117,6 +117,8 @@ export type SMSDraft = {
   parsedLastFour?: string;
   parsedMerchant?: string;
   parsedDate: string;
+  suggestedCategory?: string;
+  suggestedIcon?: string;
   suggestedAccountId?: string;
   status: "pending" | "accepted" | "dismissed";
   createdAt: string;

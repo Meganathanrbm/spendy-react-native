@@ -49,7 +49,9 @@ export default function AddTransactionScreen() {
   const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
+  );
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -66,12 +68,7 @@ export default function AddTransactionScreen() {
   }, [accounts]);
 
   // Accent color changes per type (used only for calculator + amount display)
-  const accentColor =
-    type === "income"
-      ? colors.income
-      : type === "transfer"
-        ? colors.transfer
-        : colors.expense;
+  const accentColor = colors.income;
 
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -131,7 +128,17 @@ export default function AddTransactionScreen() {
           style={styles.headerBtn}
         >
           <Ionicons name="close" size={20} color={colors.primary} />
-          <Text style={[styles.headerBtnLabel, { color: colors.primary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: typography.tracking.wide }]}>
+          <Text
+            style={[
+              styles.headerBtnLabel,
+              {
+                color: colors.primary,
+                fontSize: typography.size.sm,
+                fontWeight: typography.weight.semibold,
+                letterSpacing: typography.tracking.wide,
+              },
+            ]}
+          >
             CANCEL
           </Text>
         </TouchableOpacity>
@@ -142,7 +149,17 @@ export default function AddTransactionScreen() {
           style={styles.headerBtn}
         >
           <Ionicons name="checkmark" size={20} color={colors.primary} />
-          <Text style={[styles.headerBtnLabel, { color: colors.primary, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, letterSpacing: typography.tracking.wide }]}>
+          <Text
+            style={[
+              styles.headerBtnLabel,
+              {
+                color: colors.primary,
+                fontSize: typography.size.sm,
+                fontWeight: typography.weight.semibold,
+                letterSpacing: typography.tracking.wide,
+              },
+            ]}
+          >
             {saveMutation.isPending ? "SAVING…" : "SAVE"}
           </Text>
         </TouchableOpacity>
@@ -235,23 +252,57 @@ export default function AddTransactionScreen() {
       >
         <TouchableOpacity
           onPress={() => setShowDatePicker(true)}
-          style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+          style={[
+            styles.datePill,
+            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+          ]}
         >
-          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
-            {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+          <Ionicons
+            name="calendar-outline"
+            size={14}
+            color={colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.datePillText,
+              { color: colors.text, fontSize: typography.size.sm },
+            ]}
+          >
+            {date.toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
           </Text>
         </TouchableOpacity>
 
-        <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
+        <View
+          style={[styles.dateDivider, { backgroundColor: colors.border }]}
+        />
 
         <TouchableOpacity
           onPress={() => setShowTimePicker(true)}
-          style={[styles.datePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+          style={[
+            styles.datePill,
+            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+          ]}
         >
-          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
-            {date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+          <Ionicons
+            name="time-outline"
+            size={14}
+            color={colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.datePillText,
+              { color: colors.text, fontSize: typography.size.sm },
+            ]}
+          >
+            {date.toLocaleTimeString("en-IN", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}
           </Text>
         </TouchableOpacity>
       </View>

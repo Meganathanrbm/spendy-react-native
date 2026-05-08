@@ -3,8 +3,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+import { Appearance, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { buildTheme, AppTheme } from "../theme";
 
@@ -24,14 +26,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [mode, setModeState] = useState<ThemeMode>("light");
+  // Use system color scheme as initial value so the first render is already correct
+  const [mode, setModeState] = useState<ThemeMode>(
+    () => (Appearance.getColorScheme() === "dark" ? "dark" : "light")
+  );
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load saved preference on mount
+  // Load saved preference and override system default if user has a preference
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((saved) => {
       if (saved === "light" || saved === "dark") {
         setModeState(saved);
       }
+      setIsLoaded(true);
     });
   }, []);
 
@@ -44,17 +51,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     setMode(mode === "light" ? "dark" : "light");
   }, [mode, setMode]);
 
-  const theme = buildTheme(mode);
+  const theme = useMemo(() => buildTheme(mode), [mode]);
+
+  const value = useMemo(
+    () => ({ theme, mode, toggleTheme, setMode }),
+    [theme, mode, toggleTheme, setMode]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, mode, toggleTheme, setMode }}>
-      {children}
+    <ThemeContext.Provider value={value}>
+      {isLoaded ? (
+        children
+      ) : (
+        // Hold rendering until theme is known — prevents light→dark flash
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
+      )}
     </ThemeContext.Provider>
   );
 };
 
 export const useThemeContext = (): ThemeContextValue => {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useThemeContext must be used inside ThemeProvider");
+  if (!ctx)
+    throw new Error("useThemeContext must be used inside ThemeProvider");
   return ctx;
 };

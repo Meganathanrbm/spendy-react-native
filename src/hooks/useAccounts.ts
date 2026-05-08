@@ -11,10 +11,17 @@ import { Account } from "../types";
 export const ACCOUNTS_KEY = ["accounts"] as const;
 
 export const useAccounts = () =>
-  useQuery({ queryKey: ACCOUNTS_KEY, queryFn: getAccounts });
+  useQuery({
+    queryKey: ACCOUNTS_KEY,
+    queryFn: getAccounts,
+    staleTime: Infinity,
+  });
 
 export const usePrimaryAccount = () =>
-  useQuery({ queryKey: [...ACCOUNTS_KEY, "primary"], queryFn: getPrimaryAccount });
+  useQuery({
+    queryKey: [...ACCOUNTS_KEY, "primary"],
+    queryFn: getPrimaryAccount,
+  });
 
 export const useSaveAccount = () => {
   const qc = useQueryClient();

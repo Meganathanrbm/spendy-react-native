@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, Alert,
+  StyleSheet, RefreshControl, Alert, Animated, Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +30,18 @@ export default function AssetsScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | undefined>();
+  const addBtnScale = useRef(new Animated.Value(1)).current;
+
+  const openAddModal = () => {
+    setEditingAsset(undefined);
+    setModalVisible(true);
+  };
+
+  const onAddBtnPressIn = () =>
+    Animated.spring(addBtnScale, { toValue: 0.93, useNativeDriver: true, speed: 60, bounciness: 0 }).start();
+
+  const onAddBtnPressOut = () =>
+    Animated.spring(addBtnScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }).start();
 
   const handleRefetch = () => { refetch(); refetchSummary(); };
 
@@ -85,9 +97,8 @@ export default function AssetsScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <AppHeader
         title="Assets"
-        
         rightElement={
-          <TouchableOpacity onPress={() => { setEditingAsset(undefined); setModalVisible(true); }} style={styles.addBtn}>
+          <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
             <Ionicons name="add" size={24} color={colors.primary} />
           </TouchableOpacity>
         }
@@ -178,23 +189,32 @@ export default function AssetsScreen() {
         {/* ── Assets by type ────────────────────────────── */}
         {assets.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 44 }}>📊</Text>
+            <View style={[styles.emptyIconRing, { backgroundColor: colors.primaryMuted ?? colors.surfaceAlt }]}>
+              <Text style={{ fontSize: 36 }}>📊</Text>
+            </View>
             <Text style={[styles.emptyTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.semibold }]}>
               No assets yet
             </Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              Add your mutual funds, FDs, stocks, gold and more
+              Track your mutual funds, FDs, stocks, gold, and more
             </Text>
-            <TouchableOpacity
-              onPress={() => { setEditingAsset(undefined); setModalVisible(true); }}
-              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-              activeOpacity={0.85}
+            <Pressable
+              onPress={openAddModal}
+              onPressIn={onAddBtnPressIn}
+              onPressOut={onAddBtnPressOut}
             >
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: typography.weight.semibold, fontSize: typography.size.base }}>
-                Add Your First Asset
-              </Text>
-            </TouchableOpacity>
+              <Animated.View
+                style={[
+                  styles.emptyBtn,
+                  { backgroundColor: colors.primary, transform: [{ scale: addBtnScale }] },
+                ]}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={{ color: "#fff", fontWeight: typography.weight.semibold, fontSize: typography.size.base }}>
+                  Add Your First Asset
+                </Text>
+              </Animated.View>
+            </Pressable>
           </View>
         ) : (
           SECTION_ORDER.map((typeKey) => {
@@ -229,7 +249,7 @@ export default function AssetsScreen() {
         {/* Add more button */}
         {assets.length > 0 && (
           <TouchableOpacity
-            onPress={() => { setEditingAsset(undefined); setModalVisible(true); }}
+            onPress={openAddModal}
             style={[styles.addMoreBtn, { borderColor: colors.primary, backgroundColor: colors.primaryMuted }]}
             activeOpacity={0.75}
           >
@@ -246,6 +266,7 @@ export default function AssetsScreen() {
         onClose={() => { setModalVisible(false); setEditingAsset(undefined); }}
         existing={editingAsset}
       />
+
     </View>
   );
 }
@@ -283,9 +304,10 @@ const styles = StyleSheet.create({
   sectionLabel: { flex: 1, fontWeight: "700", letterSpacing: 1 },
   sectionTotal: {},
   empty: { alignItems: "center", paddingTop: 48, gap: 10 },
+  emptyIconRing: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   emptyTitle: {},
   emptySubtitle: { fontSize: 14, textAlign: "center", paddingHorizontal: 32 },
-  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, marginTop: 8 },
   addMoreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", paddingVertical: 14 },
   addMoreLabel: {},
 });
