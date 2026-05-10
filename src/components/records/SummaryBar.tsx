@@ -9,48 +9,28 @@ type Props = {
 };
 
 const SummaryBar = memo(function SummaryBar({ income, expense }: Props) {
-  const { colors, typography } = useTheme();
+  const { colors } = useTheme();
   const net = income - expense;
 
   const items = [
-    { label: "INCOME",  value: income,  color: colors.income },
-    { label: "EXPENSE", value: expense, color: colors.expense },
-    { label: "NET",     value: net,     color: net >= 0 ? colors.income : colors.expense },
+    { label: "INCOME",  value: income,  color: colors.primary,     sign: "" },
+    { label: "EXPENSE", value: expense, color: colors.textSecondary, sign: "" },
+    {
+      label: "NET",
+      value: Math.abs(net),
+      color: net >= 0 ? colors.primary : colors.expenseAccent,
+      sign: net >= 0 ? "+" : "−",
+    },
   ];
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.surface, borderBottomColor: colors.border },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {items.map((item, i) => (
         <React.Fragment key={item.label}>
           <View style={styles.item}>
-            <Text
-              style={[
-                styles.label,
-                {
-                  color: colors.textMuted,
-                  fontSize: typography.size.xs,
-                  letterSpacing: typography.tracking.wider,
-                },
-              ]}
-            >
-              {item.label}
-            </Text>
-            <Text
-              style={[
-                styles.value,
-                {
-                  color: item.color,
-                  fontSize: typography.size.sm,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              {formatCurrency(item.value)}
+            <Text style={[styles.label, { color: colors.textMuted }]}>{item.label}</Text>
+            <Text style={[styles.value, { color: item.color }]}>
+              {item.sign}{formatCurrency(item.value, { compact: true })}
             </Text>
           </View>
           {i < items.length - 1 && (
@@ -69,21 +49,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 8,
   },
-  item: {
-    flex: 1,
-    alignItems: "center",
-    gap: 2,
-  },
-  label: {
-    fontWeight: "600",
-  },
-  value: {},
-  divider: {
-    width: StyleSheet.hairlineWidth,
-    height: 28,
-    marginHorizontal: 4,
-  },
+  item: { flex: 1, alignItems: "center", gap: 3 },
+  label: { fontSize: 10, fontWeight: "600", letterSpacing: 0.8 },
+  value: { fontSize: 14, fontWeight: "600", letterSpacing: -0.2, fontVariant: ["tabular-nums"] },
+  divider: { width: StyleSheet.hairlineWidth, height: 28, marginHorizontal: 4 },
 });

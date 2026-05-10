@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { X } from "lucide-react-native";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../hooks/useTheme";
 import { useSaveAsset, useUpdateAsset } from "../../hooks/useAssets";
@@ -119,7 +119,7 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
               {existing ? "Edit Asset" : "Add Asset"}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <X size={22} color={colors.textSecondary} strokeWidth={1.7} />
             </TouchableOpacity>
           </View>
 

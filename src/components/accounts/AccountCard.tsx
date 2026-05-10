@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Star } from "lucide-react-native";
+import { getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency } from "../../lib/helpers/currency";
 import { Account } from "../../types";
@@ -53,7 +54,7 @@ const AccountCard = memo(function AccountCard({
         <View
           style={[styles.iconBox, { backgroundColor: account.color + "22" }]}
         >
-          <Text style={styles.iconText}>{account.icon}</Text>
+          {(() => { const Icon = getAccountTypeIcon(account.type); return <Icon size={22} color={account.color} strokeWidth={1.7} />; })()}
         </View>
 
         {/* Info */}
@@ -106,7 +107,7 @@ const AccountCard = memo(function AccountCard({
             style={styles.actionBtn}
             activeOpacity={0.7}
           >
-            <Ionicons name="star-outline" size={14} color={colors.primary} />
+            <Star size={14} color={colors.primary} strokeWidth={1.7} />
             <Text
               style={[
                 styles.actionLabel,
@@ -156,7 +157,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconText: { fontSize: 22 },
   info: { flex: 1 },
   name: {},
   type: { marginTop: 2 },

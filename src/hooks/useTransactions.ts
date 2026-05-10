@@ -5,6 +5,7 @@ import {
   fetchTransactionsByMonth,
   fetchTransactionsByPeriod,
   saveTransaction,
+  updateTransaction,
   deleteTransaction,
   clearAllTransactions,
 } from "../lib/api/transactions";
@@ -33,6 +34,18 @@ export const useSaveTransaction = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: saveTransaction,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+};
+
+export const useUpdateTransaction = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ updated, original }: { updated: Transaction; original: Transaction }) =>
+      updateTransaction(updated, original),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
       qc.invalidateQueries({ queryKey: ["accounts"] });

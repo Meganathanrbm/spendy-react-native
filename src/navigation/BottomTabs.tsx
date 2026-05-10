@@ -1,15 +1,22 @@
+// Spendy 2.0 — Bottom tab bar: icon + label, active dot indicator, no shadow.
 import React, { useCallback, memo } from "react";
-import { View, StyleSheet, Platform, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { LucideIcon } from "lucide-react-native";
+import {
+  Receipt,
+  ChartNoAxesColumn,
+  Wallet,
+  CreditCard,
+  TrendingUp,
+} from "lucide-react-native";
 
 import { useTheme } from "../hooks/useTheme";
 import { BottomTabParamList, RootStackParamList } from "./types";
-import { layout } from "../theme/spacing";
 import { DrawerProvider, useDrawer } from "../contexts/DrawerContext";
 
 // Screens
@@ -24,83 +31,67 @@ import DrawerMenu from "../components/navigation/DrawerMenu";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
-type TabIconProps = {
-  name: string;
-  focused: boolean;
-  color: string;
-  size: number;
+const TAB_CONFIG: Record<keyof BottomTabParamList, { label: string; icon: LucideIcon }> = {
+  Records:  { label: "Records",  icon: Receipt },
+  Analysis: { label: "Analysis", icon: ChartNoAxesColumn },
+  Budgets:  { label: "Budgets",  icon: Wallet },
+  Accounts: { label: "Accounts", icon: CreditCard },
+  Assets:   { label: "Assets",   icon: TrendingUp },
 };
 
-const TAB_ICONS: Record<
-  keyof BottomTabParamList,
-  { active: string; inactive: string; lib: "ionicons" | "material" }
-> = {
-  Records: { active: "receipt", inactive: "receipt-outline", lib: "ionicons" },
-  Analysis: {
-    active: "bar-chart",
-    inactive: "bar-chart-outline",
-    lib: "ionicons",
-  },
-  Budgets: { active: "wallet", inactive: "wallet-outline", lib: "ionicons" },
-  Accounts: { active: "card", inactive: "card-outline", lib: "ionicons" },
-  Assets: {
-    active: "trending-up",
-    inactive: "trending-up-outline",
-    lib: "ionicons",
-  },
-};
-
-const TabIcon = ({ name, focused, color, size }: TabIconProps) => {
-  const config = TAB_ICONS[name as keyof BottomTabParamList];
-  if (!config) return null;
-  const iconName = focused ? config.active : config.inactive;
-  return <Ionicons name={iconName as any} size={size} color={color} />;
-};
-
-// ─── Animated tab item ────────────────────────────────────────────────────────
-
-type AnimatedTabItemProps = {
-  routeKey: string;
-  routeName: string;
-  isFocused: boolean;
-  colors: any;
-  onPress: () => void;
-};
-
-const AnimatedTabItem = memo(function AnimatedTabItem({
+const TabItem = memo(function TabItem({
   routeKey,
   routeName,
   isFocused,
   colors,
   onPress,
-}: AnimatedTabItemProps) {
+}: {
+  routeKey: string;
+  routeName: string;
+  isFocused: boolean;
+  colors: any;
+  onPress: () => void;
+}) {
+  const cfg = TAB_CONFIG[routeName as keyof BottomTabParamList];
+  if (!cfg) return null;
+
   const color = isFocused ? colors.tabActive : colors.tabInactive;
+  const Icon = cfg.icon;
 
   return (
     <Pressable
-      key={routeKey}
       onPress={onPress}
       style={styles.tabItem}
       accessibilityRole="button"
       accessibilityState={{ selected: isFocused }}
     >
+      {/* Active indicator dot at very top */}
       <View
         style={[
           styles.activeDot,
           { backgroundColor: colors.tabActive, opacity: isFocused ? 1 : 0 },
         ]}
       />
-      <View style={[styles.iconContainer]}>
-        <TabIcon name={routeName} focused={isFocused} color={color} size={22} />
-      </View>
+      <Icon size={21} color={color} strokeWidth={isFocused ? 2 : 1.6} />
+      <Text
+        style={[
+          styles.tabLabel,
+          {
+            color,
+            fontWeight: isFocused ? "600" : "500",
+          },
+        ]}
+      >
+        {cfg.label}
+      </Text>
     </Pressable>
   );
 });
 
-const CustomTabBar = memo(({
+const CustomTabBar = memo(function CustomTabBar({
   state,
   navigation,
-}: BottomTabBarProps) => {
+}: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -125,15 +116,15 @@ const CustomTabBar = memo(({
         {
           backgroundColor: colors.tabBackground,
           borderTopColor: colors.border,
-          paddingBottom: insets.bottom,
-          height: layout.tabBarHeight + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
+          height: 64 + Math.max(insets.bottom, 8),
         },
       ]}
     >
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         return (
-          <AnimatedTabItem
+          <TabItem
             key={route.key}
             routeKey={route.key}
             routeName={route.name}
@@ -171,11 +162,11 @@ function BottomTabsInner() {
         tabBar={(props) => <CustomTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
-        <Tab.Screen name="Records" component={RecordsScreen} />
+        <Tab.Screen name="Records"  component={RecordsScreen} />
         <Tab.Screen name="Analysis" component={AnalysisScreen} />
-        <Tab.Screen name="Budgets" component={BudgetsScreen} />
+        <Tab.Screen name="Budgets"  component={BudgetsScreen} />
         <Tab.Screen name="Accounts" component={AccountsScreen} />
-        <Tab.Screen name="Assets" component={AssetsScreen} />
+        <Tab.Screen name="Assets"   component={AssetsScreen} />
       </Tab.Navigator>
 
       <DrawerMenu
@@ -186,8 +177,6 @@ function BottomTabsInner() {
     </>
   );
 }
-
-// ─── Navigator ───────────────────────────────────────────────────────────────
 
 export default function BottomTabs() {
   return (
@@ -201,21 +190,13 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 8 },
-    }),
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 10,
+    gap: 3,
     position: "relative",
   },
   activeDot: {
@@ -226,10 +207,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
+  tabLabel: {
+    fontSize: 10,
+    letterSpacing: 0.1,
   },
 });

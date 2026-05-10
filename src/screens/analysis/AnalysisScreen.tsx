@@ -1,13 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  RefreshControl,
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, RefreshControl,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -17,284 +12,321 @@ import { getCategoryStats, getMonthlyFlow } from "../../lib/helpers/analysis";
 import { currentMonth } from "../../lib/helpers/date";
 import { formatCurrency } from "../../lib/helpers/currency";
 import { layout } from "../../theme/spacing";
-import { Category } from "../../types";
+import { Category, Transaction } from "../../types";
 
 import AppHeader from "../../components/common/AppHeader";
 import MonthNavigator from "../../components/common/MonthNavigator";
-import SummaryBar from "../../components/records/SummaryBar";
 import DonutChart, { DonutSlice } from "../../components/charts/DonutChart";
 import ExpenseFlowChart from "../../components/charts/ExpenseFlowChart";
-import CategoryBreakdownItem from "../../components/analysis/CategoryBreakdownItem";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 
-type Section = "overview" | "flow";
+type Tab = "overview" | "flow" | "calendar";
 
+// ─── Calendar Heatmap ────────────────────────────────────────────────────────
+function CalendarHeatmap({ transactions, month, colors, typography }: {
+  transactions: Transaction[];
+  month: string;
+  colors: any;
+  typography: any;
+}) {
+  const [year, m] = month.split("-").map(Number);
+  const daysInMonth = new Date(year, m, 0).getDate();
+  const firstDow = new Date(year, m - 1, 1).getDay(); // 0=Sun
+
+  const expByDay = useMemo(() => {
+    const map: Record<number, number> = {};
+    transactions
+      .filter((t) => t.type === "expense" && t.date.startsWith(month))
+      .forEach((t) => {
+        const d = parseInt(t.date.slice(8, 10), 10);
+        map[d] = (map[d] || 0) + t.amount;
+      });
+    return map;
+  }, [transactions, month]);
+
+  const maxAmt = Math.max(...Object.values(expByDay), 1);
+  const totalExp = Object.values(expByDay).reduce((s, v) => s + v, 0);
+  const activeDays = Object.keys(expByDay).length;
+  const peakDay = Object.entries(expByDay).sort((a, b) => b[1] - a[1])[0];
+
+  const monthName = new Date(year, m - 1, 1).toLocaleString("en-US", { month: "long" }).toUpperCase();
+
+  const getIntensityColor = (amt: number) => {
+    if (!amt) return colors.surfaceAlt;
+    const ratio = amt / maxAmt;
+    if (ratio < 0.25) return colors.primary + "44";
+    if (ratio < 0.5)  return colors.primary + "77";
+    if (ratio < 0.75) return colors.primary + "AA";
+    return colors.primary;
+  };
+
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanks = Array.from({ length: firstDow }, (_, i) => i);
+
+  return (
+    <View style={[calStyles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      {/* Header */}
+      <View style={calStyles.cardHeader}>
+        <View>
+          <Text style={[calStyles.cardTitle, { color: colors.textMuted }]}>
+            CALENDAR · {monthName} {year}
+          </Text>
+          <Text style={[calStyles.totalAmt, { color: colors.text }]}>
+            {formatCurrency(totalExp, { compact: true })}
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={[calStyles.metaLine, { color: colors.textMuted }]}>
+            active <Text style={[calStyles.metaMono, { color: colors.textSecondary }]}>{activeDays}/{daysInMonth}d</Text>
+          </Text>
+          {peakDay && (
+            <Text style={[calStyles.metaLine, { color: colors.textMuted, marginTop: 2 }]}>
+              peak <Text style={[calStyles.metaMono, { color: colors.textSecondary }]}>
+                {monthName.slice(0, 3).charAt(0) + monthName.slice(1, 3).toLowerCase()} {peakDay[0]}
+              </Text>
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* Day-of-week header */}
+      <View style={calStyles.dowRow}>
+        {["S","M","T","W","T","F","S"].map((d, i) => (
+          <Text key={i} style={[calStyles.dowLabel, { color: colors.textMuted }]}>{d}</Text>
+        ))}
+      </View>
+
+      {/* Calendar grid */}
+      <View style={calStyles.grid}>
+        {blanks.map((_, i) => <View key={`b${i}`} style={calStyles.cell} />)}
+        {days.map((d) => {
+          const amt = expByDay[d];
+          const isToday = (() => {
+            const now = new Date();
+            return now.getFullYear() === year && now.getMonth() + 1 === m && now.getDate() === d;
+          })();
+          return (
+            <View
+              key={d}
+              style={[
+                calStyles.cell,
+                { backgroundColor: getIntensityColor(amt) },
+                isToday && { borderWidth: 1.5, borderColor: colors.primary },
+              ]}
+            >
+              <Text style={[calStyles.dayNum, { color: amt ? colors.text : colors.textMuted }]}>{d}</Text>
+              {amt ? (
+                <Text style={[calStyles.dayAmt, { color: colors.text }]}>
+                  {amt >= 1000 ? `${Math.round(amt / 1000)}k` : amt}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Legend */}
+      <View style={calStyles.legendRow}>
+        <Text style={[calStyles.legendLabel, { color: colors.textMuted }]}>less</Text>
+        {["44","77","AA","FF"].map((op) => (
+          <View key={op} style={[calStyles.legendDot, { backgroundColor: colors.primary + op }]} />
+        ))}
+        <Text style={[calStyles.legendLabel, { color: colors.textMuted }]}>more</Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function AnalysisScreen() {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [month, setMonth] = useState(currentMonth());
   const [categories, setCategories] = useState<Category[]>([]);
-  const [expandedSection, setExpandedSection] = useState<Section>("overview");
+  const [tab, setTab] = useState<Tab>("overview");
 
   const { data: transactions = [], isLoading, refetch } = useTransactionsByMonth(month);
   const { income, expense } = useMonthlySummary(transactions);
 
-  useEffect(() => {
-    getAllCategories().then(setCategories);
-  }, []);
+  useEffect(() => { getAllCategories().then(setCategories); }, []);
 
   const categoryStats = useMemo(
     () => getCategoryStats(transactions, categories),
-    [transactions, categories]
+    [transactions, categories],
   );
 
   const flowData = useMemo(
     () => getMonthlyFlow(transactions, month),
-    [transactions, month]
+    [transactions, month],
   );
 
   const donutSlices: DonutSlice[] = useMemo(
-    () =>
-      categoryStats.map((s) => ({
-        key: s.name,
-        label: s.name,
-        value: s.amount,
-        color: s.color,
-      })),
-    [categoryStats]
+    () => categoryStats.map((s) => ({ key: s.name, label: s.name, value: s.amount, color: s.color })),
+    [categoryStats],
   );
 
-  const toggleSection = useCallback((s: Section) =>
-    setExpandedSection((prev) => (prev === s ? "overview" : s)),
-  []);
-
-  const financialHealth = useMemo(() => {
-    const net = income - expense;
-    const savingsRate = income > 0 ? Math.round((net / income) * 100) : 0;
-    const spentPct = income > 0
-      ? Math.min(100, Math.round((expense / income) * 100))
-      : expense > 0 ? 100 : 0;
-    const healthLabel =
-      savingsRate >= 30 ? "Excellent savings" :
-      savingsRate >= 20 ? "Good savings" :
-      savingsRate >= 10 ? "Saving a little" :
-      savingsRate >= 0  ? "Breaking even" :
-                          "Overspent";
-    const healthColor =
-      savingsRate >= 20 ? colors.income :
-      savingsRate >= 0  ? "#F59E0B" :
-                          colors.expense;
-    return { net, savingsRate, spentPct, healthLabel, healthColor };
-  }, [income, expense, colors.income, colors.expense]);
-
-  const { net, savingsRate, spentPct, healthLabel, healthColor } = financialHealth;
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "flow",     label: "Daily flow" },
+    { key: "calendar", label: "Calendar" },
+  ];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <AppHeader title="Analysis"  />
-
-      <MonthNavigator month={month} onChange={setMonth} />
-      <SummaryBar income={income} expense={expense} />
+      <AppHeader title="Analysis" />
 
       <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />
-        }
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={{ paddingBottom: layout.tabBarHeight + insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Expense Overview ─────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.sectionToggle}
-            onPress={() => toggleSection("overview")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={expandedSection === "overview" ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={colors.textSecondary}
-            />
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
-              EXPENSE OVERVIEW
-            </Text>
-          </TouchableOpacity>
+        <MonthNavigator month={month} onChange={setMonth} />
 
-          {expandedSection === "overview" && (
-            <>
-              {categoryStats.length === 0 ? (
-                <View style={styles.emptyChart}>
-                  <Text style={{ fontSize: 36 }}>📊</Text>
-                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    No expenses this month
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  {/* Donut + legend */}
-                  <View style={styles.chartRow}>
+        {/* Tab row */}
+        <View style={styles.tabsRow}>
+          {TABS.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: tab === t.key ? (colors.surface3 ?? colors.surfaceElevated) : "transparent",
+                  borderColor: tab === t.key ? (colors.borderStrong ?? colors.border) : colors.border,
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, { color: tab === t.key ? colors.text : colors.textSecondary }]}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ── Overview ── */}
+        {tab === "overview" && (
+          <>
+            {categoryStats.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={{ fontSize: 36 }}>📊</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No expenses this month</Text>
+              </View>
+            ) : (
+              <>
+                {/* Hero donut card */}
+                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.heroRow}>
                     <DonutChart
                       slices={donutSlices}
-                      centerLabel="Expenses"
+                      centerLabel="SPENT"
                       centerValue={expense}
-                      size={168}
+                      size={120}
                     />
-
-                    {/* Legend */}
                     <View style={styles.legend}>
-                      {categoryStats.slice(0, 6).map((s) => (
+                      {categoryStats.slice(0, 4).map((s) => (
                         <View key={s.name} style={styles.legendItem}>
                           <View style={[styles.legendDot, { backgroundColor: s.color }]} />
                           <Text
-                            style={[styles.legendLabel, { color: colors.textSecondary, fontSize: typography.size.xs }]}
+                            style={[styles.legendName, { color: colors.textSecondary }]}
                             numberOfLines={1}
                           >
                             {s.name}
                           </Text>
+                          <Text style={[styles.legendPct, { color: colors.text, fontVariant: ["tabular-nums"] }]}>
+                            {Math.round((s.amount / (expense || 1)) * 100)}%
+                          </Text>
                         </View>
                       ))}
-                      {categoryStats.length > 6 && (
-                        <Text style={[styles.legendMore, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                          +{categoryStats.length - 6} more
-                        </Text>
-                      )}
                     </View>
                   </View>
+                </View>
 
-                  {/* Category breakdown list */}
-                  <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-                  {categoryStats.map((stat) => (
-                    <CategoryBreakdownItem
-                      key={stat.name}
-                      icon={stat.icon}
-                      name={stat.name}
-                      amount={stat.amount}
-                      percent={stat.percent}
-                      color={stat.color}
-                      count={stat.count}
-                    />
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </View>
+                {/* BY CATEGORY */}
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>BY CATEGORY</Text>
+                </View>
+                <View style={[styles.catList, { borderColor: colors.border }]}>
+                  {categoryStats.map((stat) => {
+                    const pct = (stat.amount / (expense || 1)) * 100;
+                    const Icon = getCategoryIcon(stat.name);
+                    return (
+                      <View
+                        key={stat.name}
+                        style={[styles.catRow, { borderBottomColor: colors.border }]}
+                      >
+                        <View style={[styles.catIcon, { backgroundColor: stat.color + "22" }]}>
+                          <Icon size={18} color={stat.color} strokeWidth={1.7} />
+                        </View>
+                        <View style={styles.catInfo}>
+                          <View style={styles.catTopRow}>
+                            <Text style={[styles.catName, { color: colors.text }]}>{stat.name}</Text>
+                            <Text style={[styles.catAmt, { color: colors.text, fontVariant: ["tabular-nums"] }]}>
+                              {formatCurrency(stat.amount, { compact: true })}
+                            </Text>
+                          </View>
+                          <View style={styles.catBarRow}>
+                            <View style={[styles.catBarTrack, { backgroundColor: colors.surfaceAlt }]}>
+                              <View
+                                style={[styles.catBarFill, { width: `${Math.min(100, pct)}%`, backgroundColor: stat.color }]}
+                              />
+                            </View>
+                            <Text style={[styles.catPct, { color: colors.textMuted, fontVariant: ["tabular-nums"] }]}>
+                              {pct.toFixed(1)}%
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+          </>
+        )}
 
-        {/* ── Expense Flow ─────────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.sectionToggle}
-            onPress={() => toggleSection("flow")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={expandedSection === "flow" ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={colors.textSecondary}
-            />
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
-              EXPENSE FLOW
-            </Text>
-          </TouchableOpacity>
-
-          {expandedSection === "flow" && (
-            <>
-              {flowData.length < 2 ? (
-                <View style={styles.emptyChart}>
-                  <Text style={{ fontSize: 36 }}>📈</Text>
-                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    Not enough data yet
+        {/* ── Daily Flow ── */}
+        {tab === "flow" && (
+          <View style={{ paddingHorizontal: 16 }}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.flowHeader}>
+                <View>
+                  <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>DAILY EXPENSE</Text>
+                  <Text style={[styles.flowTotal, { color: colors.text, fontVariant: ["tabular-nums"] }]}>
+                    {formatCurrency(expense, { compact: true })}
                   </Text>
+                </View>
+                <Text style={[styles.flowAvg, { color: colors.textMuted }]}>
+                  avg{" "}
+                  <Text style={{ color: colors.textSecondary, fontVariant: ["tabular-nums"] }}>
+                    {formatCurrency(expense / 30, { compact: true })}/d
+                  </Text>
+                </Text>
+              </View>
+              {flowData.length < 2 ? (
+                <View style={styles.empty}>
+                  <Text style={{ fontSize: 36 }}>📈</Text>
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Not enough data yet</Text>
                 </View>
               ) : (
                 <ExpenseFlowChart data={flowData} />
               )}
-            </>
-          )}
-        </View>
-
-        {/* ── Financial Health ─────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14 }]}>
-            FINANCIAL HEALTH
-          </Text>
-
-          {income === 0 && expense === 0 ? (
-            <View style={styles.emptyChart}>
-              <Text style={{ fontSize: 36 }}>💡</Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No transactions this month
-              </Text>
             </View>
-          ) : (
-            <View style={styles.healthBody}>
-              {/* Savings rate badge + stats row */}
-              <View style={styles.healthTopRow}>
-                {/* Big savings rate */}
-                <View style={[styles.rateBox, { backgroundColor: healthColor + "18", borderColor: healthColor + "40" }]}>
-                  <Text style={[styles.ratePct, { color: healthColor, fontSize: typography.size["2xl"] ?? 24, fontWeight: typography.weight.extrabold }]}>
-                    {savingsRate >= 0 ? "+" : ""}{savingsRate}%
-                  </Text>
-                  <Text style={[styles.rateLabel, { color: healthColor, fontSize: typography.size.xs, fontWeight: typography.weight.medium }]}>
-                    {healthLabel}
-                  </Text>
-                </View>
+          </View>
+        )}
 
-                {/* 3-stat grid */}
-                <View style={styles.statsGrid}>
-                  <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: colors.income }]} />
-                    <View>
-                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Income</Text>
-                      <Text style={[styles.statItemValue, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
-                        {formatCurrency(income, { compact: true })}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: colors.expense }]} />
-                    <View>
-                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Spent</Text>
-                      <Text style={[styles.statItemValue, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
-                        {formatCurrency(expense, { compact: true })}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: net >= 0 ? colors.income : colors.expense }]} />
-                    <View>
-                      <Text style={[styles.statItemLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>Net saved</Text>
-                      <Text style={[styles.statItemValue, { color: net >= 0 ? colors.income : colors.expense, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
-                        {formatCurrency(net, { showSign: true, compact: true })}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Spend allocation bar */}
-              <View style={styles.allocationWrap}>
-                <View style={[styles.allocationTrack, { backgroundColor: colors.incomeLight ?? colors.border }]}>
-                  <View style={[styles.allocationFill, { width: `${spentPct}%`, backgroundColor: colors.expense }]} />
-                </View>
-                <View style={styles.allocationLabels}>
-                  <View style={styles.allocLabelRow}>
-                    <View style={[styles.allocDot, { backgroundColor: colors.expense }]} />
-                    <Text style={[styles.allocText, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                      {spentPct}% spent of income
-                    </Text>
-                  </View>
-                  <View style={styles.allocLabelRow}>
-                    <View style={[styles.allocDot, { backgroundColor: colors.income }]} />
-                    <Text style={[styles.allocText, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                      {Math.max(0, 100 - spentPct)}% retained
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
+        {/* ── Calendar ── */}
+        {tab === "calendar" && (
+          <View style={{ paddingHorizontal: 16 }}>
+            <CalendarHeatmap
+              transactions={transactions}
+              month={month}
+              colors={colors}
+              typography={typography}
+            />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -302,75 +334,102 @@ export default function AnalysisScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  card: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: layout.cardRadius,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  sectionToggle: {
+
+  tabsRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    padding: 16,
-  },
-  sectionTitle: { letterSpacing: 0.5 },
-  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
-  emptyChart: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 36,
-    gap: 8,
-  },
-  emptyText: { fontSize: 14 },
-  chartRow: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
+  },
+  tab: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  tabText: { fontSize: 12, fontWeight: "600", letterSpacing: 0.1 },
+
+  card: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 20,
+    marginBottom: 0,
+  },
+
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
-  legend: {
-    flex: 1,
-    gap: 7,
-  },
-  legendItem: {
+  legend: { flex: 1, gap: 7 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+  legendDot: { width: 8, height: 8, borderRadius: 2, flexShrink: 0 },
+  legendName: { flex: 1, fontSize: 11.5 },
+  legendPct: { fontSize: 11.5, fontWeight: "500" },
+
+  sectionHeader: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 },
+  sectionLabel: { fontSize: 10.5, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase" },
+
+  catList: { paddingHorizontal: 16 },
+  catRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    flexShrink: 0,
+  catIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  catInfo: { flex: 1 },
+  catTopRow: { flexDirection: "row", justifyContent: "space-between" },
+  catName: { fontSize: 13, fontWeight: "500" },
+  catAmt: { fontSize: 13, fontWeight: "500" },
+  catBarRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5 },
+  catBarTrack: { flex: 1, height: 3, borderRadius: 2, overflow: "hidden" },
+  catBarFill: { height: "100%", borderRadius: 2 },
+  catPct: { fontSize: 10.5, width: 38, textAlign: "right" },
+
+  flowHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 },
+  flowTotal: { fontSize: 22, fontWeight: "600", marginTop: 4, letterSpacing: -0.6 },
+  flowAvg: { fontSize: 11 },
+
+  empty: { alignItems: "center", paddingVertical: 48, gap: 8 },
+  emptyText: { fontSize: 13 },
+});
+
+// ─── Calendar Heatmap styles ──────────────────────────────────────────────────
+const calStyles = StyleSheet.create({
+  card: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
   },
-  legendLabel: { flex: 1 },
-  legendMore: {},
-  healthBody: { paddingHorizontal: 16, paddingBottom: 20, gap: 16 },
-  healthTopRow: { flexDirection: "row", gap: 14, alignItems: "center" },
-  rateBox: {
-    width: 100,
-    height: 84,
-    borderRadius: 16,
-    borderWidth: 1,
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  cardTitle: { fontSize: 10, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase" },
+  totalAmt: { fontSize: 22, fontWeight: "600", letterSpacing: -0.6, marginTop: 4, fontVariant: ["tabular-nums"] },
+  metaLine: { fontSize: 10 },
+  metaMono: { fontVariant: ["tabular-nums"], fontWeight: "500" },
+
+  dowRow: { flexDirection: "row", marginBottom: 6 },
+  dowLabel: { flex: 1, textAlign: "center", fontSize: 10, fontWeight: "600" },
+
+  grid: { flexDirection: "row", flexWrap: "wrap" },
+  cell: {
+    width: "14.28%",
+    aspectRatio: 1,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    padding: 2,
   },
-  ratePct: {},
-  rateLabel: { letterSpacing: 0.2 },
-  statsGrid: { flex: 1, gap: 10 },
-  statItem: { flexDirection: "row", alignItems: "center", gap: 8 },
-  statDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  statItemLabel: {},
-  statItemValue: {},
-  allocationWrap: { gap: 8 },
-  allocationTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
-  allocationFill: { height: "100%", borderRadius: 4 },
-  allocationLabels: { flexDirection: "row", justifyContent: "space-between" },
-  allocLabelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  allocDot: { width: 6, height: 6, borderRadius: 3 },
-  allocText: {},
+  dayNum: { fontSize: 9, fontWeight: "600" },
+  dayAmt: { fontSize: 8, fontVariant: ["tabular-nums"], fontWeight: "500" },
+
+  legendRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 5, marginTop: 12 },
+  legendDot: { width: 10, height: 10, borderRadius: 3 },
+  legendLabel: { fontSize: 10 },
 });

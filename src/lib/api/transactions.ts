@@ -44,6 +44,32 @@ export const deleteTransaction = async (id: string): Promise<void> => {
   }
 };
 
+export const updateTransaction = async (updated: Transaction, original: Transaction): Promise<void> => {
+  const json = await AsyncStorage.getItem(KEY);
+  const data: Transaction[] = json ? JSON.parse(json) : [];
+  const idx = data.findIndex((t) => t.id === updated.id);
+  if (idx === -1) throw new Error("Transaction not found");
+  data[idx] = updated;
+  await AsyncStorage.setItem(KEY, JSON.stringify(data));
+  // Reverse original balance effect then apply updated
+  if (original.type === "income") {
+    await updateAccountBalance(original.accountId, -original.amount);
+  } else if (original.type === "expense") {
+    await updateAccountBalance(original.accountId, original.amount);
+  } else if (original.type === "transfer") {
+    if (original.fromAccountId) await updateAccountBalance(original.fromAccountId, original.amount);
+    if (original.toAccountId) await updateAccountBalance(original.toAccountId, -original.amount);
+  }
+  if (updated.type === "income") {
+    await updateAccountBalance(updated.accountId, updated.amount);
+  } else if (updated.type === "expense") {
+    await updateAccountBalance(updated.accountId, -updated.amount);
+  } else if (updated.type === "transfer") {
+    if (updated.fromAccountId) await updateAccountBalance(updated.fromAccountId, -updated.amount);
+    if (updated.toAccountId) await updateAccountBalance(updated.toAccountId, updated.amount);
+  }
+};
+
 export const clearAllTransactions = async (): Promise<void> => {
   await AsyncStorage.removeItem(KEY);
 };

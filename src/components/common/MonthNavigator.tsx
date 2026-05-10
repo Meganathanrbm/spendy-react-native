@@ -1,6 +1,7 @@
-import React from "react";
+// Spendy 2.0 — Month navigator. Compact, space-between, chevrons in textSecondary.
+import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { formatMonthLabel, stepMonth } from "../../lib/helpers/date";
 
@@ -9,56 +10,54 @@ type Props = {
   onChange: (month: string) => void;
 };
 
-export default function MonthNavigator({ month, onChange }: Props) {
-  const { colors, typography } = useTheme();
+const MonthNavigator = memo(function MonthNavigator({ month, onChange }: Props) {
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
         onPress={() => onChange(stepMonth(month, -1))}
         style={styles.arrow}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+        <ChevronLeft size={18} color={colors.textSecondary} strokeWidth={1.7} />
       </TouchableOpacity>
 
-      <Text
-        style={[
-          styles.label,
-          {
-            color: colors.text,
-            fontSize: typography.size.base,
-            fontWeight: typography.weight.semibold,
-          },
-        ]}
-      >
+      <Text style={[styles.label, { color: colors.text }]}>
         {formatMonthLabel(month)}
       </Text>
 
       <TouchableOpacity
         onPress={() => onChange(stepMonth(month, +1))}
         style={styles.arrow}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        <ChevronRight size={18} color={colors.textSecondary} strokeWidth={1.7} />
       </TouchableOpacity>
     </View>
   );
-}
+});
+
+export default MonthNavigator;
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 12,
   },
   arrow: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
-    minWidth: 140,
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
     textAlign: "center",
   },
 });

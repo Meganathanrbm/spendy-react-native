@@ -8,7 +8,11 @@ import {
   Alert,
   Switch,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Moon, LayoutGrid, MessageSquare, Bell, Cloud, ShieldCheck,
+  Info, Trash2, LogOut, ChevronRight,
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
@@ -24,7 +28,7 @@ import AppHeader from "../../components/common/AppHeader";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type SettingRow = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: LucideIcon;
   label: string;
   sublabel?: string;
   onPress?: () => void;
@@ -65,7 +69,7 @@ export default function SettingsScreen() {
 
   const rows: SettingRow[] = [
     {
-      icon: "moon-outline",
+      icon: Moon,
       label: "Dark Mode",
       sublabel: mode === "dark" ? "On" : "Off",
       rightElement: (
@@ -78,46 +82,46 @@ export default function SettingsScreen() {
       ),
     },
     {
-      icon: "grid-outline",
+      icon: LayoutGrid,
       label: "Categories",
       sublabel: "Manage income & expense categories",
       onPress: () => navigation.navigate("CategoriesNav"),
     },
     {
-      icon: "chatbubble-ellipses-outline",
+      icon: MessageSquare,
       label: "Fetch Bank SMS",
       sublabel: "Auto-detect transactions from SMS",
       onPress: () => navigation.navigate("SMSInbox"),
     },
     {
-      icon: "notifications-outline",
+      icon: Bell,
       label: "Notifications",
       sublabel: "Coming soon",
     },
     {
-      icon: "cloud-upload-outline",
+      icon: Cloud,
       label: "Export Data",
       sublabel: "Coming soon",
     },
     {
-      icon: "shield-checkmark-outline",
+      icon: ShieldCheck,
       label: "Privacy & Security",
       sublabel: "Coming soon",
     },
     {
-      icon: "information-circle-outline",
+      icon: Info,
       label: "About Spendy",
       sublabel: "Version 2.0.0",
     },
     {
-      icon: "trash-outline",
+      icon: Trash2,
       label: "Clear All Data",
       sublabel: "Delete all transactions, accounts, budgets",
       onPress: handleClearData,
       danger: true,
     },
     {
-      icon: "log-out-outline",
+      icon: LogOut,
       label: "Logout",
       onPress: () => {
         Alert.alert("Logout", "Are you sure?", [
@@ -127,7 +131,6 @@ export default function SettingsScreen() {
             style: "destructive",
             onPress: async () => {
               await logout();
-              // RootNavigator automatically shows auth stack when user is null
             },
           },
         ]);
@@ -150,70 +153,69 @@ export default function SettingsScreen() {
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
         >
-          {rows.map((row, i) => (
-            <TouchableOpacity
-              key={row.label}
-              onPress={row.onPress}
-              disabled={!row.onPress}
-              activeOpacity={0.7}
-              style={[
-                styles.row,
-                { borderBottomColor: colors.divider },
-                i < rows.length - 1 && {
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                },
-              ]}
-            >
-              <View
+          {rows.map((row, i) => {
+            const RowIcon = row.icon;
+            return (
+              <TouchableOpacity
+                key={row.label}
+                onPress={row.onPress}
+                disabled={!row.onPress}
+                activeOpacity={0.7}
                 style={[
-                  styles.iconBox,
-                  {
-                    backgroundColor: row.danger
-                      ? colors.expenseLight
-                      : colors.surfaceAlt,
+                  styles.row,
+                  { borderBottomColor: colors.divider },
+                  i < rows.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
                   },
                 ]}
               >
-                <Ionicons
-                  name={row.icon}
-                  size={18}
-                  color={row.danger ? colors.expense : colors.primary}
-                />
-              </View>
-              <View style={styles.rowInfo}>
-                <Text
+                <View
                   style={[
-                    styles.rowLabel,
+                    styles.iconBox,
                     {
-                      color: row.danger ? colors.expense : colors.text,
-                      fontSize: typography.size.base,
-                      fontWeight: typography.weight.medium,
+                      backgroundColor: row.danger
+                        ? colors.expenseLight
+                        : colors.surfaceAlt,
                     },
                   ]}
                 >
-                  {row.label}
-                </Text>
-                {row.sublabel && (
+                  <RowIcon
+                    size={18}
+                    color={row.danger ? colors.expense : colors.primary}
+                    strokeWidth={1.7}
+                  />
+                </View>
+                <View style={styles.rowInfo}>
                   <Text
                     style={[
-                      styles.rowSublabel,
-                      { color: colors.textMuted, fontSize: typography.size.xs },
+                      styles.rowLabel,
+                      {
+                        color: row.danger ? colors.expense : colors.text,
+                        fontSize: typography.size.base,
+                        fontWeight: typography.weight.medium,
+                      },
                     ]}
                   >
-                    {row.sublabel}
+                    {row.label}
                   </Text>
-                )}
-              </View>
-              {row.rightElement ??
-                (row.onPress ? (
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={colors.textMuted}
-                  />
-                ) : null)}
-            </TouchableOpacity>
-          ))}
+                  {row.sublabel && (
+                    <Text
+                      style={[
+                        styles.rowSublabel,
+                        { color: colors.textMuted, fontSize: typography.size.xs },
+                      ]}
+                    >
+                      {row.sublabel}
+                    </Text>
+                  )}
+                </View>
+                {row.rightElement ??
+                  (row.onPress ? (
+                    <ChevronRight size={16} color={colors.textMuted} strokeWidth={1.7} />
+                  ) : null)}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>

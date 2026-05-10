@@ -1,3 +1,4 @@
+// Spendy 2.0 — dark-first design. Default is dark mode.
 import React, {
   createContext,
   useCallback,
@@ -6,7 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Appearance, View } from "react-native";
+import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { buildTheme, AppTheme } from "../theme";
 
@@ -26,13 +27,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Use system color scheme as initial value so the first render is already correct
-  const [mode, setModeState] = useState<ThemeMode>(
-    () => (Appearance.getColorScheme() === "dark" ? "dark" : "light")
-  );
+  // Spendy 2.0 defaults to dark mode — override only if user has saved a preference
+  const [mode, setModeState] = useState<ThemeMode>("dark");
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load saved preference and override system default if user has a preference
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((saved) => {
       if (saved === "light" || saved === "dark") {
@@ -63,8 +61,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       {isLoaded ? (
         children
       ) : (
-        // Hold rendering until theme is known — prevents light→dark flash
-        <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
+        <View style={{ flex: 1, backgroundColor: "#0A0A0A" }} />
       )}
     </ThemeContext.Provider>
   );

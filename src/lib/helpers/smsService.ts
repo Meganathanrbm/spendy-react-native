@@ -116,18 +116,11 @@ export async function fetchParsedBankTransactions(
     }
   }
   const filtered = drafts.filter((d) => {
-    const matchedAccount = accounts.find(
-      (a) =>
-        a.lastFourDigits === d.parsedLastFour &&
-        (!a.bankName || a.bankName.toLowerCase() === d.parsedBank.toLowerCase()),
-    );
-
     return !existingTransactions.some(
       (t) =>
         t.amount === d.parsedAmount &&
         t.type === d.parsedType &&
-        t.date.slice(0, 10) === d.parsedDate.slice(0, 10)  &&
-        (!matchedAccount || t.accountId === matchedAccount.id),
+        t.date.slice(0, 10) === d.parsedDate.slice(0, 10),
     );
   });
 

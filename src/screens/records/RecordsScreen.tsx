@@ -18,7 +18,7 @@ import {
   Animated,
   Pressable,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Search, X, Plus, CircleX } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,12 +42,10 @@ import SummaryBar from "../../components/records/SummaryBar";
 import AccountBanner from "../../components/records/AccountBanner";
 import DateGroupHeader from "../../components/records/DateGroupHeader";
 import TransactionItem from "../../components/records/TransactionItem";
+import TransactionDetailModal from "../../components/records/TransactionDetailModal";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-// Defined outside RecordsScreen so its identity is stable across renders.
-// Passing a JSX element to ListHeaderComponent causes remount on every dep
-// change; a component reference avoids that entirely.
 type ListHeaderProps = {
   account: Account | null;
   income: number;
@@ -67,12 +65,7 @@ const ListHeader = memo(function ListHeader({
 }: ListHeaderProps) {
   return (
     <View>
-      <AccountBanner
-        account={account}
-        income={income}
-        expense={expense}
-        onPress={onAccountPress}
-      />
+      <AccountBanner account={account} onPress={onAccountPress} />
       <MonthNavigator month={month} onChange={onMonthChange} />
       <SummaryBar income={income} expense={expense} />
     </View>
@@ -101,11 +94,10 @@ const SearchButton = memo(function SearchButton({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       <Animated.View style={{ transform: [{ rotate: spin }] }}>
-        <Ionicons
-          name={isSearching ? "close-outline" : "search-outline"}
-          size={22}
-          color={color}
-        />
+        {isSearching
+          ? <X size={22} color={color} strokeWidth={1.7} />
+          : <Search size={22} color={color} strokeWidth={1.7} />
+        }
       </Animated.View>
     </Pressable>
   );
@@ -121,6 +113,7 @@ export default function RecordsScreen() {
   const [month, setMonth] = useState(currentMonth());
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   const {
     data: transactions = [],
@@ -289,9 +282,13 @@ export default function RecordsScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
-      <TransactionItem transaction={item} onLongPress={handleDelete} />
+      <TransactionItem
+        transaction={item}
+        onPress={setSelectedTx}
+        onLongPress={handleDelete}
+      />
     ),
-    [handleDelete],
+    [handleDelete, setSelectedTx],
   );
 
   // handleSearchToggle is stable (no deps). fabSpin is a useRef. So this memo
@@ -322,7 +319,7 @@ export default function RecordsScreen() {
             { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
           ]}
         >
-          <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+          <Search size={16} color={colors.textMuted} strokeWidth={1.7} />
           <TextInput
             autoFocus={isSearching}
             placeholder="Search transactions..."
@@ -336,11 +333,7 @@ export default function RecordsScreen() {
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery("")}>
-              <Ionicons
-                name="close-circle"
-                size={16}
-                color={colors.textMuted}
-              />
+              <CircleX size={16} color={colors.textMuted} strokeWidth={1.7} />
             </Pressable>
           )}
         </View>
@@ -391,7 +384,13 @@ export default function RecordsScreen() {
         }}
       />
 
-      {/* Animated FAB */}
+      <TransactionDetailModal
+        transaction={selectedTx}
+        visible={!!selectedTx}
+        onClose={() => setSelectedTx(null)}
+      />
+
+      {/* Animated FAB — rounded square per Spendy 2.0 design */}
       <Pressable
         onPressIn={onFabPressIn}
         onPressOut={onFabPressOut}
@@ -410,7 +409,7 @@ export default function RecordsScreen() {
             },
           ]}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <Plus size={26} color="#0A0A0A" strokeWidth={2} />
         </Animated.View>
       </Pressable>
     </View>
@@ -451,18 +450,18 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, textAlign: "center", paddingHorizontal: 32 },
   fabHit: {
     position: "absolute",
-    right: 20,
+    right: 18,
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 14,          // rounded square per Spendy 2.0
     alignItems: "center",
     justifyContent: "center",
     elevation: 8,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
   },
 });

@@ -10,7 +10,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { X, Check, Star, StarOff, Trash2 } from "lucide-react-native";
 import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -177,7 +177,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
               {existing ? "Edit Account" : "New Account"}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <X size={22} color={colors.textSecondary} strokeWidth={1.7} />
             </TouchableOpacity>
           </View>
 
@@ -225,7 +225,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                 ]}
               >
                 {color === c && (
-                  <Ionicons name="checkmark" size={14} color="#fff" />
+                  <Check size={14} color="#fff" strokeWidth={2.5} />
                 )}
               </TouchableOpacity>
             ))}
@@ -408,11 +408,10 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
             ]}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name={isPrimary ? "star" : "star-outline"}
-              size={18}
-              color={isPrimary ? color : colors.textMuted}
-            />
+            {isPrimary
+              ? <Star size={18} color={color} strokeWidth={1.7} />
+              : <StarOff size={18} color={colors.textMuted} strokeWidth={1.7} />
+            }
             <Text
               style={[
                 styles.primaryToggleLabel,
@@ -459,7 +458,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
               style={[styles.deleteBtn, { opacity: isDeleting ? 0.6 : 1 }]}
               activeOpacity={0.85}
             >
-              <Ionicons name="trash-outline" size={18} color="#E63946" />
+              <Trash2 size={18} color="#E63946" strokeWidth={1.7} />
               <Text
                 style={[
                   styles.deleteBtnText,

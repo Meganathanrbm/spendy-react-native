@@ -1,8 +1,9 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Pencil, Trash2, Calendar } from "lucide-react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency, formatPercent } from "../../lib/helpers/currency";
+import { ASSET_TYPE_ICONS } from "../../lib/helpers/categoryIcons";
 import { Asset } from "../../types";
 import { layout } from "../../theme/spacing";
 
@@ -12,23 +13,24 @@ type Props = {
   onDelete: () => void;
 };
 
-export const ASSET_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
-  stocks:        { label: "Stocks",          icon: "📊", color: "#6366F1" },
-  mutual_fund:   { label: "Mutual Fund",     icon: "📈", color: "#2D6A4F" },
-  fixed_deposit: { label: "Fixed Deposit",   icon: "🏦", color: "#457B9D" },
-  gold:          { label: "Gold",            icon: "🥇", color: "#F59E0B" },
-  ppf:           { label: "PPF",             icon: "🏛️", color: "#8B5CF6" },
-  nps:           { label: "NPS",             icon: "🏢", color: "#06B6D4" },
-  epf:           { label: "EPF",             icon: "🏗️", color: "#10B981" },
-  crypto:        { label: "Crypto",          icon: "₿",  color: "#F97316" },
-  real_estate:   { label: "Real Estate",     icon: "🏠", color: "#EC4899" },
-  other:         { label: "Other",           icon: "📦", color: "#64748B" },
+export const ASSET_TYPE_META: Record<string, { label: string; color: string }> = {
+  stocks:        { label: "Stocks",        color: "#6366F1" },
+  mutual_fund:   { label: "Mutual Fund",   color: "#2D6A4F" },
+  fixed_deposit: { label: "Fixed Deposit", color: "#457B9D" },
+  gold:          { label: "Gold",          color: "#F59E0B" },
+  ppf:           { label: "PPF",           color: "#8B5CF6" },
+  nps:           { label: "NPS",           color: "#06B6D4" },
+  epf:           { label: "EPF",           color: "#10B981" },
+  crypto:        { label: "Crypto",        color: "#F97316" },
+  real_estate:   { label: "Real Estate",   color: "#EC4899" },
+  other:         { label: "Other",         color: "#64748B" },
 };
 
 export default function AssetCard({ asset, onEdit, onDelete }: Props) {
   const { colors, typography } = useTheme();
 
   const meta = ASSET_TYPE_META[asset.type] ?? ASSET_TYPE_META.other;
+  const AssetIcon = ASSET_TYPE_ICONS[asset.type] ?? ASSET_TYPE_ICONS.other;
   const returns = asset.currentValue - asset.investedAmount;
   const returnsPercent = asset.investedAmount > 0
     ? (returns / asset.investedAmount) * 100
@@ -40,7 +42,7 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
       {/* Top row */}
       <View style={styles.topRow}>
         <View style={[styles.iconBox, { backgroundColor: meta.color + "22" }]}>
-          <Text style={styles.icon}>{meta.icon}</Text>
+          <AssetIcon size={20} color={meta.color} strokeWidth={1.7} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.name, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]} numberOfLines={1}>
@@ -54,10 +56,10 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
         </View>
         <View style={styles.menuBtns}>
           <TouchableOpacity onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
+            <Pencil size={16} color={colors.textSecondary} strokeWidth={1.7} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="trash-outline" size={16} color={colors.expense} />
+            <Trash2 size={16} color={colors.expense} strokeWidth={1.7} />
           </TouchableOpacity>
         </View>
       </View>
@@ -102,7 +104,7 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
           )}
           {asset.maturityDate && (
             <View style={styles.detailChip}>
-              <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+              <Calendar size={11} color={colors.textMuted} strokeWidth={1.7} />
               <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.size.xs }]}>
                 Matures {new Date(asset.maturityDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
               </Text>
@@ -132,7 +134,6 @@ const styles = StyleSheet.create({
   },
   topRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconBox: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  icon: { fontSize: 20 },
   info: { flex: 1 },
   name: {},
   type: { marginTop: 2 },

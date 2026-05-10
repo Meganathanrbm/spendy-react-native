@@ -1,175 +1,98 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency } from "../../lib/helpers/currency";
+import { getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import { Account } from "../../types";
 import { layout } from "../../theme/spacing";
 
 type Props = {
   account: Account | null;
-  income: number;
-  expense: number;
+  income?: number;
+  expense?: number;
   onPress?: () => void;
 };
 
-export default function AccountBanner({ account, income, expense, onPress }: Props) {
+export default function AccountBanner({ account, onPress }: Props) {
   const { colors, typography } = useTheme();
 
   if (!account) return null;
 
+  // Use account's own color for icon tinting, fall back to primary
+  const accentColor = account.color || colors.primary;
+  const AccountIcon = getAccountTypeIcon(account.type);
+
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
+      activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.card, { backgroundColor: colors.primary }]}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      {/* Top row — account name + chevron */}
-      <View style={styles.topRow}>
-        <View style={styles.accountLabel}>
-          <Text style={[styles.icon]}>{account.icon}</Text>
-          <View>
-            <Text
-              style={[
-                styles.accountName,
-                { color: "rgba(255,255,255,0.75)", fontSize: typography.size.xs },
-              ]}
-            >
-              {account.type.toUpperCase()} · PRIMARY
-            </Text>
-            <Text
-              style={[
-                styles.accountName,
-                {
-                  color: "#fff",
-                  fontSize: typography.size.md,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              {account.name}
-            </Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
-      </View>
-
-      {/* Balance */}
-      <Text
-        style={[
-          styles.balance,
-          {
-            color: "#fff",
-            fontSize: typography.size["3xl"],
-            fontWeight: typography.weight.bold,
-          },
-        ]}
-      >
-        {formatCurrency(account.balance)}
-      </Text>
-
-      {/* Income / Expense row */}
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <View style={styles.statIcon}>
-            <Ionicons name="arrow-down" size={12} color={colors.incomeLight} />
-          </View>
-          <View>
-            <Text style={[styles.statLabel, { color: "rgba(255,255,255,0.6)" }]}>
-              Income
-            </Text>
-            <Text
-              style={[
-                styles.statValue,
-                { color: "#fff", fontWeight: typography.weight.semibold },
-              ]}
-            >
-              {formatCurrency(income)}
-            </Text>
-          </View>
+      <View style={styles.row}>
+        {/* Icon box — account-color tinted rounded square */}
+        <View style={[styles.iconBox, { backgroundColor: accentColor + "22" }]}>
+          <AccountIcon size={20} color={accentColor} strokeWidth={1.7} />
         </View>
 
-        <View style={[styles.statDivider, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+        {/* Balance col */}
+        <View style={styles.balanceCol}>
+          <View style={styles.primaryRow}>
+            <Text style={[styles.primaryLabel, { color: colors.textMuted }]}>PRIMARY</Text>
+            <View style={[styles.dot, { backgroundColor: accentColor }]} />
+          </View>
+          <Text
+            style={[
+              styles.balance,
+              { color: colors.text, fontSize: typography.size["2xl"], fontWeight: typography.weight.semibold },
+            ]}
+          >
+            {formatCurrency(account.balance)}
+          </Text>
+        </View>
 
-        <View style={styles.stat}>
-          <View style={[styles.statIcon, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
-            <Ionicons name="arrow-up" size={12} color="rgba(255,255,255,0.8)" />
-          </View>
-          <View>
-            <Text style={[styles.statLabel, { color: "rgba(255,255,255,0.6)" }]}>
-              Expense
-            </Text>
-            <Text
-              style={[
-                styles.statValue,
-                { color: "#fff", fontWeight: typography.weight.semibold },
-              ]}
-            >
-              {formatCurrency(expense)}
-            </Text>
-          </View>
+        {/* Account name + last four */}
+        <View style={styles.accountInfo}>
+          <Text
+            style={[styles.accountName, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.medium }]}
+            numberOfLines={1}
+          >
+            {account.name}
+          </Text>
+          <Text style={[styles.accountSub, { color: colors.textMuted }]}>
+            {account.lastFourDigits ? `•• ${account.lastFourDigits}` : account.type}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
 
+const ICON_SIZE = 40;
+
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: layout.screenPadding,
-    marginVertical: 12,
+    marginTop: 14,
+    marginBottom: 4,
     borderRadius: layout.cardRadius,
-    padding: 20,
-    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
   },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  accountLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  icon: {
-    fontSize: 28,
-  },
-  accountName: {},
-  balance: {
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  stat: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  row: { flexDirection: "row", alignItems: "center", gap: 14 },
+  iconBox: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: Math.round(ICON_SIZE * 0.3),
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  statLabel: {
-    fontSize: 11,
-  },
-  statValue: {
-    fontSize: 13,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-  },
+  balanceCol: { flex: 1 },
+  primaryRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  primaryLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.8 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
+  balance: { marginTop: 2, letterSpacing: -0.6, fontVariant: ["tabular-nums"] },
+  accountInfo: { alignItems: "flex-end", maxWidth: 110 },
+  accountName: { letterSpacing: -0.1 },
+  accountSub: { fontSize: 10.5, marginTop: 2, fontVariant: ["tabular-nums"] },
 });

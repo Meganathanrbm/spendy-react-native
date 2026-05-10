@@ -3,7 +3,8 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Alert, Animated, Pressable,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Plus, TrendingUp, TrendingDown, CirclePlus } from "lucide-react-native";
+import { ASSET_TYPE_ICONS } from "../../lib/helpers/categoryIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -99,7 +100,7 @@ export default function AssetsScreen() {
         title="Assets"
         rightElement={
           <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
-            <Ionicons name="add" size={24} color={colors.primary} />
+            <Plus size={24} color={colors.primary} strokeWidth={1.7} />
           </TouchableOpacity>
         }
       />
@@ -111,76 +112,73 @@ export default function AssetsScreen() {
       >
         {/* ── Portfolio Overview Card ───────────────────── */}
         {summary && (
-          <View style={[styles.overviewCard, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.overviewLabel, { color: "rgba(255,255,255,0.7)" }]}>TOTAL PORTFOLIO</Text>
-            <Text style={[styles.overviewTotal, { color: "#fff", fontSize: typography.size["3xl"], fontWeight: typography.weight.extrabold }]}>
+          <View style={[styles.overviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.overviewLabel, { color: colors.textMuted }]}>Total portfolio</Text>
+            <Text style={[styles.overviewTotal, { color: colors.text, fontSize: typography.size["3xl"], fontWeight: typography.weight.extrabold }]}>
               {formatCurrency(summary.totalCurrentValue)}
             </Text>
 
             <View style={styles.overviewReturns}>
-              <Ionicons name={isPositive ? "trending-up" : "trending-down"} size={16} color={isPositive ? "#A7F3D0" : "#FCA5A5"} />
-              <Text style={[styles.overviewReturnsText, { color: isPositive ? "#A7F3D0" : "#FCA5A5", fontWeight: typography.weight.semibold }]}>
+              {isPositive ? <TrendingUp size={14} color={colors.primary} strokeWidth={1.7} /> : <TrendingDown size={14} color={colors.expenseAccent ?? "#F87171"} strokeWidth={1.7} />}
+              <Text style={[styles.overviewReturnsText, { color: isPositive ? colors.primary : colors.expenseAccent ?? "#F87171", fontWeight: typography.weight.semibold }]}>
                 {isPositive ? "+" : ""}{formatCurrency(totalReturns, { compact: true })}{"  "}
                 ({isPositive ? "+" : ""}{formatPercent(totalReturnsPercent)})
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: typography.size.xs }}>overall</Text>
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>overall</Text>
             </View>
 
-            <View style={styles.overviewRow}>
+            {/* Embedded allocation donut */}
+            {donutSlices.length > 0 && (
+              <View style={[styles.allocationInner, { borderTopColor: colors.border }]}>
+                <View style={styles.allocationRow}>
+                  <DonutChart slices={donutSlices} centerLabel="Portfolio" centerValue={summary.totalCurrentValue} size={140} />
+                  <View style={styles.allocationLegend}>
+                    {donutSlices.map((s) => {
+                      const pct = summary.totalCurrentValue > 0
+                        ? (s.value / summary.totalCurrentValue) * 100 : 0;
+                      return (
+                        <View key={s.key} style={styles.legendRow}>
+                          <View style={[styles.legendDot, { backgroundColor: s.color }]} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.legendLabel, { color: colors.text, fontSize: typography.size.xs, fontWeight: typography.weight.medium }]}>
+                              {s.label}
+                            </Text>
+                            <Text style={[styles.legendValue, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                              {formatCurrency(s.value, { compact: true })}  ·  {formatPercent(pct, 0)}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.overviewRow, { backgroundColor: colors.surfaceAlt, borderRadius: 10 }]}>
               <View style={styles.overviewStat}>
-                <Text style={[styles.overviewStatLabel, { color: "rgba(255,255,255,0.6)" }]}>INVESTED</Text>
-                <Text style={[styles.overviewStatValue, { color: "#fff", fontWeight: typography.weight.semibold }]}>
+                <Text style={[styles.overviewStatLabel, { color: colors.textMuted }]}>INVESTED</Text>
+                <Text style={[styles.overviewStatValue, { color: colors.text, fontWeight: typography.weight.semibold }]}>
                   {formatCurrency(summary.totalInvested, { compact: true })}
                 </Text>
               </View>
-              <View style={[styles.overviewDivider, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+              <View style={[styles.overviewDivider, { backgroundColor: colors.border }]} />
               <View style={styles.overviewStat}>
-                <Text style={[styles.overviewStatLabel, { color: "rgba(255,255,255,0.6)" }]}>ASSETS</Text>
-                <Text style={[styles.overviewStatValue, { color: "#fff", fontWeight: typography.weight.semibold }]}>
+                <Text style={[styles.overviewStatLabel, { color: colors.textMuted }]}>ASSETS</Text>
+                <Text style={[styles.overviewStatValue, { color: colors.text, fontWeight: typography.weight.semibold }]}>
                   {assets.length}
                 </Text>
               </View>
-              <View style={[styles.overviewDivider, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+              <View style={[styles.overviewDivider, { backgroundColor: colors.border }]} />
               <View style={styles.overviewStat}>
-                <Text style={[styles.overviewStatLabel, { color: "rgba(255,255,255,0.6)" }]}>LIQUID</Text>
-                <Text style={[styles.overviewStatValue, { color: "#fff", fontWeight: typography.weight.semibold }]}>
+                <Text style={[styles.overviewStatLabel, { color: colors.textMuted }]}>LIQUID</Text>
+                <Text style={[styles.overviewStatValue, { color: colors.text, fontWeight: typography.weight.semibold }]}>
                   {formatCurrency(
                     assets.filter((a) => ["stocks", "mutual_fund", "gold", "crypto"].includes(a.type))
                       .reduce((s, a) => s + a.currentValue, 0),
                     { compact: true }
                   )}
                 </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ── Allocation Chart ──────────────────────────── */}
-        {donutSlices.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
-              ALLOCATION
-            </Text>
-            <View style={styles.allocationRow}>
-              <DonutChart slices={donutSlices} centerLabel="Portfolio" centerValue={summary?.totalCurrentValue} size={160} />
-              <View style={styles.allocationLegend}>
-                {donutSlices.map((s) => {
-                  const pct = summary && summary.totalCurrentValue > 0
-                    ? (s.value / summary.totalCurrentValue) * 100 : 0;
-                  return (
-                    <View key={s.key} style={styles.legendRow}>
-                      <View style={[styles.legendDot, { backgroundColor: s.color }]} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.legendLabel, { color: colors.text, fontSize: typography.size.xs, fontWeight: typography.weight.medium }]}>
-                          {s.label}
-                        </Text>
-                        <Text style={[styles.legendValue, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                          {formatCurrency(s.value, { compact: true })}  ·  {formatPercent(pct, 0)}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
               </View>
             </View>
           </View>
@@ -209,7 +207,7 @@ export default function AssetsScreen() {
                   { backgroundColor: colors.primary, transform: [{ scale: addBtnScale }] },
                 ]}
               >
-                <Ionicons name="add" size={18} color="#fff" />
+                <Plus size={18} color="#fff" strokeWidth={2} />
                 <Text style={{ color: "#fff", fontWeight: typography.weight.semibold, fontSize: typography.size.base }}>
                   Add Your First Asset
                 </Text>
@@ -225,7 +223,7 @@ export default function AssetsScreen() {
             return (
               <View key={typeKey}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionIcon}>{meta.icon}</Text>
+                  {(() => { const Icon = ASSET_TYPE_ICONS[typeKey] ?? ASSET_TYPE_ICONS.other; return <Icon size={14} color={colors.textSecondary} strokeWidth={1.7} />; })()}
                   <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontSize: typography.size.xs }]}>
                     {meta.label.toUpperCase()}
                   </Text>
@@ -253,7 +251,7 @@ export default function AssetsScreen() {
             style={[styles.addMoreBtn, { borderColor: colors.primary, backgroundColor: colors.primaryMuted }]}
             activeOpacity={0.75}
           >
-            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+            <CirclePlus size={20} color={colors.primary} strokeWidth={1.7} />
             <Text style={[styles.addMoreLabel, { color: colors.primary, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
               Add Asset
             </Text>
@@ -274,8 +272,9 @@ export default function AssetsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   addBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  overviewCard: { margin: 16, borderRadius: layout.cardRadius, padding: 20, gap: 10 },
-  overviewLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  overviewCard: { margin: 16, borderRadius: layout.cardRadius, borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 10 },
+  overviewLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
+  allocationInner: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14, marginTop: 4 },
   overviewTotal: {},
   overviewReturns: { flexDirection: "row", alignItems: "center", gap: 6 },
   overviewReturnsText: { fontSize: 14 },

@@ -1,3 +1,4 @@
+// Spendy 2.0 — Bottom sheet. Surface bg, 20px top radius, handle bar, dark overlay.
 import React from "react";
 import {
   Modal,
@@ -15,7 +16,8 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  maxHeight?: number;
+  maxHeight?: number;  // 0–1 fraction of screen height
+  padded?: boolean;    // add 16px side padding to content
 };
 
 export default function BottomSheet({
@@ -23,6 +25,7 @@ export default function BottomSheet({
   onClose,
   children,
   maxHeight = 0.6,
+  padded = true,
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -34,47 +37,66 @@ export default function BottomSheet({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: colors.surface,
-            maxHeight: SCREEN_H * maxHeight,
-            paddingBottom: insets.bottom + 8,
-          },
-        ]}
-      >
-        <View style={styles.handleArea}>
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+      <View style={styles.root}>
+        <TouchableOpacity
+          style={[styles.backdrop, { backgroundColor: colors.overlay }]}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              maxHeight: SCREEN_H * maxHeight,
+              paddingBottom: insets.bottom + 12,
+            },
+          ]}
+        >
+          {/* Handle */}
+          <View style={styles.handleArea}>
+            <View
+              style={[styles.handle, { backgroundColor: colors.borderStrong }]}
+            />
+          </View>
+          {/* Content */}
+          <View style={padded ? styles.contentPadded : undefined}>
+            {children}
+          </View>
         </View>
-        {children}
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
   },
   sheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
   handleArea: {
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 6,
     alignItems: "center",
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
+  },
+  contentPadded: {
+    paddingHorizontal: 16,
   },
 });

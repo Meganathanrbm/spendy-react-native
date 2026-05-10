@@ -8,7 +8,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { X, Check, Delete, Calendar, Clock } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type {
   NativeStackNavigationProp,
@@ -19,7 +19,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
-import { useSaveTransaction } from "../../hooks/useTransactions";
+import { useSaveTransaction, useUpdateTransaction } from "../../hooks/useTransactions";
 import { useAccounts } from "../../hooks/useAccounts";
 import { RootStackParamList } from "../../navigation/types";
 import { Transaction, TransactionType, Account, Category } from "../../types";
@@ -43,32 +43,38 @@ export default function AddTransactionScreen() {
 
   const { data: accounts = [] } = useAccounts();
   const saveMutation = useSaveTransaction();
+  const updateMutation = useUpdateTransaction();
+
+  const editTx = route.params?.editTransaction;
+  const isEditing = !!editTx;
 
   // ─── State ───────────────────────────────────────────────────────────────
-  const [type, setType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
+  const [type, setType] = useState<TransactionType>(editTx?.type ?? "expense");
+  const [amount, setAmount] = useState(editTx ? String(editTx.amount) : "0");
+  const [description, setDescription] = useState(editTx?.title ?? "");
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null,
+    editTx ? { id: editTx.category, name: editTx.category, icon: editTx.icon, color: "", type: editTx.type === "income" ? "income" : "expense", isCustom: false } : null,
   );
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(editTx ? new Date(editTx.date) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // Pre-select primary account
+  // Pre-select account
   useEffect(() => {
     if (accounts.length > 0 && !selectedAccount) {
-      const defaultId = route.params?.defaultAccountId;
-      const primary = defaultId
-        ? accounts.find((a) => a.id === defaultId)
+      const accountId = editTx?.accountId ?? route.params?.defaultAccountId;
+      const primary = accountId
+        ? accounts.find((a) => a.id === accountId)
         : (accounts.find((a) => a.isPrimary) ?? accounts[0]);
       setSelectedAccount(primary ?? null);
     }
   }, [accounts]);
 
-  // Accent color changes per type (used only for calculator + amount display)
-  const accentColor = colors.income;
+  // Amount color + sign per Spendy 2.0: expense = neutral text, income = primary, transfer = blue
+  const amountColor  = type === "income" ? colors.primary : type === "transfer" ? colors.transfer : colors.text;
+  const amountPrefix = type === "income" ? "+" : type === "expense" ? "−" : "";
+  const accentColor  = colors.primary; // calculator key accent
 
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -87,7 +93,7 @@ export default function AddTransactionScreen() {
     }
 
     const tx: Transaction = {
-      id: uuid.v4() as string,
+      id: editTx?.id ?? (uuid.v4() as string),
       title: description.trim() || selectedCategory.name,
       amount: numAmount,
       category: selectedCategory.name,
@@ -98,7 +104,11 @@ export default function AddTransactionScreen() {
     };
 
     try {
-      await saveMutation.mutateAsync(tx);
+      if (isEditing && editTx) {
+        await updateMutation.mutateAsync({ updated: tx, original: editTx });
+      } else {
+        await saveMutation.mutateAsync(tx);
+      }
       navigation.goBack();
     } catch {
       Alert.alert("Error", "Failed to save transaction.");
@@ -127,7 +137,7 @@ export default function AddTransactionScreen() {
           onPress={() => navigation.goBack()}
           style={styles.headerBtn}
         >
-          <Ionicons name="close" size={20} color={colors.primary} />
+          <X size={20} color={colors.primary} strokeWidth={1.7} />
           <Text
             style={[
               styles.headerBtnLabel,
@@ -145,10 +155,10 @@ export default function AddTransactionScreen() {
 
         <TouchableOpacity
           onPress={handleSave}
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || updateMutation.isPending}
           style={styles.headerBtn}
         >
-          <Ionicons name="checkmark" size={20} color={colors.primary} />
+          <Check size={20} color={colors.primary} strokeWidth={2} />
           <Text
             style={[
               styles.headerBtnLabel,
@@ -160,7 +170,7 @@ export default function AddTransactionScreen() {
               },
             ]}
           >
-            {saveMutation.isPending ? "SAVING…" : "SAVE"}
+            {(saveMutation.isPending || updateMutation.isPending) ? "SAVING…" : isEditing ? "UPDATE" : "SAVE"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -184,7 +194,7 @@ export default function AddTransactionScreen() {
         />
       </View>
 
-      {/* ── Description ── */}
+      {/* ── Notes ── */}
       <View
         style={[
           styles.descriptionBox,
@@ -192,7 +202,7 @@ export default function AddTransactionScreen() {
         ]}
       >
         <TextInput
-          placeholder="Description (optional)"
+          placeholder="Add notes"
           placeholderTextColor={colors.textMuted}
           value={description}
           onChangeText={setDescription}
@@ -202,6 +212,7 @@ export default function AddTransactionScreen() {
           ]}
           maxLength={150}
           multiline
+          numberOfLines={3}
         />
       </View>
 
@@ -216,18 +227,19 @@ export default function AddTransactionScreen() {
           style={[
             styles.amountText,
             {
-              color: parseFloat(amount) > 0 ? accentColor : colors.textMuted,
+              color: parseFloat(amount) > 0 ? amountColor : colors.textMuted,
               fontSize: typography.size["4xl"],
               fontWeight: typography.weight.bold,
+              fontVariant: ["tabular-nums"],
             },
           ]}
           adjustsFontSizeToFit
           numberOfLines={1}
         >
-          {amount === "0" ? "0.00" : amount}
+          {parseFloat(amount) > 0 ? `${amountPrefix}₹${amount}` : "0"}
         </Text>
         <TouchableOpacity onPress={handleBackspace} style={styles.backspaceBtn}>
-          <Ionicons name="backspace-outline" size={24} color={accentColor} />
+          <Delete size={24} color={accentColor} strokeWidth={1.7} />
         </TouchableOpacity>
       </View>
 
@@ -257,11 +269,7 @@ export default function AddTransactionScreen() {
             { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
           ]}
         >
-          <Ionicons
-            name="calendar-outline"
-            size={14}
-            color={colors.textSecondary}
-          />
+          <Calendar size={14} color={colors.textSecondary} strokeWidth={1.7} />
           <Text
             style={[
               styles.datePillText,
@@ -287,11 +295,7 @@ export default function AddTransactionScreen() {
             { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
           ]}
         >
-          <Ionicons
-            name="time-outline"
-            size={14}
-            color={colors.textSecondary}
-          />
+          <Clock size={14} color={colors.textSecondary} strokeWidth={1.7} />
           <Text
             style={[
               styles.datePillText,
@@ -363,15 +367,16 @@ const styles = StyleSheet.create({
   descriptionBox: {
     marginHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 10,
     marginBottom: 8,
   },
   descriptionInput: {
-    height: 110,
+    minHeight: 64,
     padding: 0,
     textAlignVertical: "top",
+    lineHeight: 20,
   },
 
   amountRow: {
@@ -379,9 +384,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginBottom: 10,
   },
   amountText: {

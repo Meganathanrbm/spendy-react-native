@@ -22,7 +22,7 @@ export default function DateGroupHeader({ date, transactions }: Props) {
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.surfaceAlt },
+        { backgroundColor: colors.background },
       ]}
     >
       <Text
@@ -30,24 +30,24 @@ export default function DateGroupHeader({ date, transactions }: Props) {
           styles.dateLabel,
           {
             color: colors.textSecondary,
-            fontSize: typography.size.xs,
-            fontWeight: typography.weight.semibold,
-            letterSpacing: typography.tracking.wide,
+            fontSize: 11.5,
+            fontWeight: "600",
+            letterSpacing: 0.2,
           },
         ]}
       >
-        {formatDateGroupHeader(date).toUpperCase()}
+        {formatDateGroupHeader(date)}
       </Text>
 
       <View style={styles.totals}>
         {dayIncome > 0 && (
-          <Text style={[styles.total, { color: colors.income, fontSize: typography.size.xs }]}>
+          <Text style={[styles.total, { color: colors.primary, fontSize: 11 }]}>
             +{formatCurrency(dayIncome, { compact: true })}
           </Text>
         )}
         {dayExpense > 0 && (
-          <Text style={[styles.total, { color: colors.expense, fontSize: typography.size.xs }]}>
-            -{formatCurrency(dayExpense, { compact: true })}
+          <Text style={[styles.total, { color: colors.textMuted, fontSize: 11 }]}>
+            −{formatCurrency(dayExpense, { compact: true })}
           </Text>
         )}
       </View>
@@ -70,5 +70,6 @@ const styles = StyleSheet.create({
   },
   total: {
     fontWeight: "600",
+    fontVariant: ["tabular-nums"],
   },
 });

@@ -10,14 +10,15 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { Ionicons, FontAwesome, AntDesign } from "@expo/vector-icons";
+import { FontAwesome, AntDesign } from "@expo/vector-icons";
+import { User, Mail, Lock, Eye, EyeOff, CheckCheck } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useMutation } from "@tanstack/react-query";
 import { signup } from "../../lib/api/auth";
 import { useAuth } from "../../contexts/AuthContext";
-import { User } from "../../types";
+import { User as UserType } from "../../types";
 
 const SignupScreen = () => {
   const navigation =
@@ -31,7 +32,7 @@ const SignupScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (user: User) => signup(user),
+    mutationFn: (user: UserType) => signup(user),
     onSuccess: async (_, user) => {
       Alert.alert("Success", "Account created!");
       await authLogin({ name: user.name, email: user.email });
@@ -52,7 +53,7 @@ const SignupScreen = () => {
       return;
     }
 
-    const newUser: User = {
+    const newUser: UserType = {
       name: fullName.trim(),
       email: email.toLowerCase().trim(),
       password,
@@ -77,7 +78,7 @@ const SignupScreen = () => {
 
           {/* Full Name */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
-            <Ionicons name="person-outline" size={20} />
+            <User size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Full Name"
@@ -88,7 +89,7 @@ const SignupScreen = () => {
 
           {/* Email */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
-            <Ionicons name="mail-outline" size={20} />
+            <Mail size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Email"
@@ -101,7 +102,7 @@ const SignupScreen = () => {
 
           {/* Password */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
-            <Ionicons name="lock-closed-outline" size={20} />
+            <Lock size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Password"
@@ -110,13 +111,17 @@ const SignupScreen = () => {
               onChangeText={setPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} />
+              {showPassword ? (
+                <EyeOff size={20} color="#374151" strokeWidth={1.7} />
+              ) : (
+                <Eye size={20} color="#374151" strokeWidth={1.7} />
+              )}
             </TouchableOpacity>
           </View>
 
           {/* Confirm Password */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-6">
-            <Ionicons name="checkmark-done-outline" size={20} />
+            <CheckCheck size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Confirm Password"

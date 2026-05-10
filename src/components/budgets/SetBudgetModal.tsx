@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { CircleX } from "lucide-react-native";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../hooks/useTheme";
 import { useSaveBudget } from "../../hooks/useBudgets";
@@ -108,7 +108,7 @@ export default function SetBudgetModal({
           />
           {limitStr.length > 0 && (
             <TouchableOpacity onPress={() => setLimitStr("")}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              <CircleX size={20} color={colors.textMuted} strokeWidth={1.7} />
             </TouchableOpacity>
           )}
         </View>

@@ -1,8 +1,10 @@
+import { Transaction } from "../types";
+
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Main: undefined;
-  AddTransaction: { defaultAccountId?: string } | undefined;
+  AddTransaction: { defaultAccountId?: string; editTransaction?: Transaction } | undefined;
   AddAccount: undefined;
   AddAsset: undefined;
   SetBudget: { categoryName: string; month: string; existingLimit?: number };

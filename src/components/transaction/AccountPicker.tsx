@@ -6,9 +6,11 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronDown, Check } from "lucide-react-native";
+import { getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
 import { useAccounts } from "../../hooks/useAccounts";
+import { formatCurrency } from "../../lib/helpers/currency";
 import BottomSheet from "../common/BottomSheet";
 import { Account } from "../../types";
 
@@ -46,7 +48,7 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
         <View style={styles.triggerValue}>
           {selected ? (
             <>
-              <Text style={{ fontSize: 18 }}>{selected.icon}</Text>
+              {(() => { const Icon = getAccountTypeIcon(selected.type); return <Icon size={18} color={selected.color} strokeWidth={1.7} />; })()}
               <Text
                 style={[
                   styles.valueName,
@@ -71,7 +73,7 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
               Select…
             </Text>
           )}
-          <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+          <ChevronDown size={14} color={colors.textMuted} strokeWidth={1.7} />
         </View>
       </TouchableOpacity>
       <BottomSheet
@@ -106,9 +108,12 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
                   styles.option,
                   {
                     borderBottomColor: colors.divider,
-                    backgroundColor: isSelected
-                      ? colors.primaryMuted
-                      : "transparent",
+                    backgroundColor: isSelected ? colors.surfaceElevated : "transparent",
+                    borderWidth: isSelected ? StyleSheet.hairlineWidth : 0,
+                    borderColor: isSelected ? (colors.borderStrong ?? colors.border) : "transparent",
+                    borderRadius: isSelected ? 10 : 0,
+                    marginHorizontal: isSelected ? 8 : 0,
+                    paddingHorizontal: isSelected ? 8 : 16,
                   },
                 ]}
                 activeOpacity={0.7}
@@ -119,7 +124,7 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
                     { backgroundColor: item.color + "22" },
                   ]}
                 >
-                  <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+                  {(() => { const Icon = getAccountTypeIcon(item.type); return <Icon size={18} color={item.color} strokeWidth={1.7} />; })()}
                 </View>
                 <View style={styles.optionInfo}>
                   <Text
@@ -142,12 +147,11 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                   </Text>
                 </View>
+                <Text style={[styles.optionBalance, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
+                  {formatCurrency(item.balance, { compact: true })}
+                </Text>
                 {isSelected && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={20}
-                    color={colors.primary}
-                  />
+                  <Check size={16} color={colors.primary} strokeWidth={2} />
                 )}
               </TouchableOpacity>
             );
@@ -195,4 +199,5 @@ const styles = StyleSheet.create({
   optionInfo: { flex: 1 },
   optionName: { fontSize: 15 },
   optionType: {},
+  optionBalance: { marginRight: 8 },
 });

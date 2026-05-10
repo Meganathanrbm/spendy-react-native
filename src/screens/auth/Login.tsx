@@ -11,7 +11,8 @@ import {
   Alert,
   Image,
 } from "react-native";
-import { Ionicons, FontAwesome, AntDesign } from "@expo/vector-icons";
+import { FontAwesome, AntDesign } from "@expo/vector-icons";
+import { Mail, Lock, Eye, EyeOff, Square, CheckSquare } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -75,7 +76,7 @@ const LoginScreen = () => {
 
           {/* Email */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
-            <Ionicons name="mail-outline" size={20} />
+            <Mail size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Enter your email"
@@ -88,7 +89,7 @@ const LoginScreen = () => {
 
           {/* Password */}
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-2">
-            <Ionicons name="lock-closed-outline" size={20} />
+            <Lock size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
               className="flex-1 ml-2"
               placeholder="Password"
@@ -97,7 +98,7 @@ const LoginScreen = () => {
               onChangeText={setPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} />
+              {showPassword ? <EyeOff size={20} color="#374151" strokeWidth={1.7} /> : <Eye size={20} color="#374151" strokeWidth={1.7} />}
             </TouchableOpacity>
           </View>
 
@@ -107,11 +108,7 @@ const LoginScreen = () => {
               className="flex-row items-center"
               onPress={() => setRememberMe(!rememberMe)}
             >
-              <Ionicons
-                name={rememberMe ? "checkbox" : "square-outline"}
-                size={20}
-                color="#000"
-              />
+              {rememberMe ? <CheckSquare size={20} color="#000" strokeWidth={1.7} /> : <Square size={20} color="#000" strokeWidth={1.7} />}
               <Text className="ml-2 text-gray-700">Remember me</Text>
             </TouchableOpacity>
             <TouchableOpacity>

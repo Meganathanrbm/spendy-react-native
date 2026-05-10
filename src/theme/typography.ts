@@ -1,18 +1,25 @@
+// Spendy 2.0 Typography — Geist Sans for UI, system mono for all numerals
 export const typography = {
-  // Font sizes
-  size: {
-    xs: 11,
-    sm: 12,
-    base: 14,
-    md: 15,
-    lg: 17,
-    xl: 20,
-    "2xl": 24,
-    "3xl": 28,
-    "4xl": 34,
+  // Font family
+  family: {
+    sans: undefined,      // system default (Geist on device, system sans elsewhere)
+    mono: "monospace" as const,   // all amounts, %, dates — tabular-nums
   },
 
-  // Font weights (React Native uses string literals)
+  // Type scale (px → pt in RN is 1:1 on most devices)
+  size: {
+    xs: 10.5,    // section labels, badges (UPPERCASE)
+    sm: 11.5,    // captions, sub-labels, time stamps
+    base: 13,    // body / transaction titles
+    md: 14,      // list primary text
+    lg: 15,      // card headings
+    xl: 18,      // screen section titles
+    "2xl": 22,   // account balance, summary numbers
+    "3xl": 28,   // hero amounts (add transaction)
+    "4xl": 34,   // display (large balance)
+  },
+
+  // Font weights
   weight: {
     regular: "400" as const,
     medium: "500" as const,
@@ -28,13 +35,14 @@ export const typography = {
     relaxed: 1.6,
   },
 
-  // Letter spacing
+  // Letter spacing (tracking)
   tracking: {
-    tight: -0.3,
+    tightest: -1.2,  // large display numbers
+    tight: -0.4,     // headings
     normal: 0,
     wide: 0.5,
-    wider: 1.0,
-    widest: 1.5,
+    wider: 0.8,      // section labels in uppercase
+    widest: 1.2,     // caps labels
   },
 } as const;
 

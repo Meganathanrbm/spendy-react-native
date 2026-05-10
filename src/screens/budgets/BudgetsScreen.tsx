@@ -8,7 +8,8 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Plus } from "lucide-react-native";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -221,7 +222,7 @@ export default function BudgetsScreen() {
                   style={[styles.unbudgetedRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={[styles.unbudgetedIcon, { backgroundColor: stat.color + "22" }]}>
-                    <Text style={{ fontSize: 18 }}>{stat.icon}</Text>
+                    {(() => { const Icon = getCategoryIcon(stat.name); return <Icon size={20} color={stat.color} strokeWidth={1.7} />; })()}
                   </View>
                   <View style={styles.unbudgetedInfo}>
                     <Text style={[styles.unbudgetedName, { color: colors.text, fontWeight: typography.weight.medium }]}>
@@ -264,11 +265,11 @@ export default function BudgetsScreen() {
                 style={[styles.addBudgetChip, { backgroundColor: cat.color + "18", borderColor: cat.color + "44" }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
+                {(() => { const Icon = getCategoryIcon(cat.name); return <Icon size={16} color={cat.color} strokeWidth={1.7} />; })()}
                 <Text style={[styles.addBudgetLabel, { color: colors.text, fontSize: typography.size.xs, fontWeight: typography.weight.medium }]}>
                   {cat.name}
                 </Text>
-                <Ionicons name="add" size={14} color={cat.color} />
+                <Plus size={14} color={cat.color} strokeWidth={2} />
               </TouchableOpacity>
             ))}
         </ScrollView>

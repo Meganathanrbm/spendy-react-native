@@ -10,7 +10,10 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  ArrowDown, ArrowUp, CircleCheck, CreditCard, Info,
+  X, Check, ArrowLeft, CheckCheck, Mail, RefreshCw,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import uuid from "react-native-uuid";
@@ -81,11 +84,7 @@ const DraftCard = ({
       <View style={[styles.topStrip, { backgroundColor: accentBg }]}>
         <View style={styles.topLeft}>
           <View style={[styles.typeIcon, { backgroundColor: amountColor }]}>
-            <Ionicons
-              name={isCredit ? "arrow-down" : "arrow-up"}
-              size={10}
-              color="#fff"
-            />
+            {isCredit ? <ArrowDown size={10} color="#fff" strokeWidth={2} /> : <ArrowUp size={10} color="#fff" strokeWidth={2} />}
           </View>
           <Text
             style={[
@@ -165,33 +164,21 @@ const DraftCard = ({
             <View
               style={[styles.chip, { backgroundColor: colors.primaryMuted }]}
             >
-              <Ionicons
-                name="checkmark-circle"
-                size={11}
-                color={colors.primary}
-              />
+              <CircleCheck size={11} color={colors.primary} strokeWidth={2} />
               <Text style={[styles.chipText, { color: colors.primary }]}>
                 {matchedAccount.name}
               </Text>
             </View>
           ) : draft.parsedLastFour ? (
             <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-              <Ionicons
-                name="card-outline"
-                size={11}
-                color={colors.textMuted}
-              />
+              <CreditCard size={11} color={colors.textMuted} strokeWidth={1.7} />
               <Text style={[styles.chipText, { color: colors.textMuted }]}>
                 ••••{draft.parsedLastFour}
               </Text>
             </View>
           ) : (
             <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-              <Ionicons
-                name="help-circle-outline"
-                size={11}
-                color={colors.textMuted}
-              />
+              <Info size={11} color={colors.textMuted} strokeWidth={1.7} />
               <Text style={[styles.chipText, { color: colors.textMuted }]}>
                 No account matched
               </Text>
@@ -221,7 +208,7 @@ const DraftCard = ({
           onPress={onDismiss}
           style={[styles.actionBtn, { borderColor: colors.border }]}
         >
-          <Ionicons name="close" size={16} color={colors.textMuted} />
+          <X size={16} color={colors.textMuted} strokeWidth={1.7} />
           <Text
             style={[
               styles.actionLabel,
@@ -238,7 +225,7 @@ const DraftCard = ({
             { backgroundColor: colors.primary, borderColor: colors.primary },
           ]}
         >
-          <Ionicons name="checkmark" size={16} color="#fff" />
+          <Check size={16} color="#fff" strokeWidth={2} />
           <Text
             style={[
               styles.actionLabel,
@@ -268,6 +255,9 @@ export default function SMSInboxScreen() {
   const saveTransaction = useSaveTransaction();
 
   const [drafts, setDrafts] = useState<SMSDraft[]>([]);
+  const [accepted, setAccepted] = useState<SMSDraft[]>([]);
+  const [dismissed, setDismissed] = useState<SMSDraft[]>([]);
+  const [tab, setTab] = useState<"pending" | "accepted" | "dismissed">("pending");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,6 +325,7 @@ export default function SMSInboxScreen() {
           smsSource: draft.parsedBank,
         });
         setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
+        setAccepted((prev) => [...prev, draft]);
       } catch {
         Alert.alert("Error", "Failed to save transaction.");
       }
@@ -343,8 +334,12 @@ export default function SMSInboxScreen() {
   );
 
   const handleDismiss = useCallback(
-    (id: string) => setDrafts((p) => p.filter((d) => d.id !== id)),
-    [],
+    (id: string) => {
+      const draft = drafts.find((d) => d.id === id);
+      setDrafts((p) => p.filter((d) => d.id !== id));
+      if (draft) setDismissed((prev) => [...prev, draft]);
+    },
+    [drafts],
   );
   const handleAcceptAll = useCallback(() => {
     if (!drafts.length) return;
@@ -384,7 +379,7 @@ export default function SMSInboxScreen() {
             { opacity: pressed ? 0.6 : 1 },
           ]}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={1.7} />
         </Pressable>
 
         <Text
@@ -426,25 +421,34 @@ export default function SMSInboxScreen() {
         )}
       </View>
 
-      {/* ── Count banner ── */}
-      {drafts.length > 0 && (
-        <View style={[styles.banner, { backgroundColor: colors.primaryMuted }]}>
-          <Ionicons
-            name="checkmark-done-circle-outline"
-            size={15}
-            color={colors.primary}
-          />
-          <Text
-            style={[
-              styles.bannerText,
-              { color: colors.primary, fontSize: typography.size.sm },
-            ]}
-          >
-            {drafts.length} transaction{drafts.length !== 1 ? "s" : ""} detected
-            · last 30 days
-          </Text>
-        </View>
-      )}
+      {/* ── Tabs ── */}
+      <View style={[styles.tabsRow, { borderBottomColor: colors.border }]}>
+        {(["pending", "accepted", "dismissed"] as const).map((t) => {
+          const count = t === "pending" ? drafts.length : t === "accepted" ? accepted.length : dismissed.length;
+          return (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={[
+                styles.tabBtn,
+                tab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabBtnText, { color: tab === t ? colors.text : colors.textMuted }]}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </Text>
+              {count > 0 && (
+                <View style={[styles.tabBadge, { backgroundColor: t === "pending" ? colors.primaryMuted : colors.surfaceAlt }]}>
+                  <Text style={[styles.tabBadgeText, { color: t === "pending" ? colors.primary : colors.textMuted }]}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {/* ── Loading ── */}
       {loading && (
@@ -467,11 +471,7 @@ export default function SMSInboxScreen() {
           <View
             style={[styles.stateIcon, { backgroundColor: colors.surfaceAlt }]}
           >
-            <Ionicons
-              name="mail-unread-outline"
-              size={32}
-              color={colors.textMuted}
-            />
+            <Mail size={32} color={colors.textMuted} strokeWidth={1.5} />
           </View>
           <Text
             style={[
@@ -503,7 +503,7 @@ export default function SMSInboxScreen() {
                 { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
               ]}
             >
-              <Ionicons name="refresh-outline" size={16} color="#fff" />
+              <RefreshCw size={16} color="#fff" strokeWidth={1.7} />
               <Text
                 style={[
                   styles.btnLabel,
@@ -522,74 +522,67 @@ export default function SMSInboxScreen() {
       )}
 
       {/* ── Empty state ── */}
-      {!loading && !error && drafts.length === 0 && hasPermission && (
+      {!loading && !error && tab === "pending" && drafts.length === 0 && hasPermission && (
         <View style={styles.center}>
-          <View
-            style={[styles.stateIcon, { backgroundColor: colors.incomeLight }]}
-          >
-            <Ionicons
-              name="checkmark-done-outline"
-              size={32}
-              color={colors.income}
-            />
+          <View style={[styles.stateIcon, { backgroundColor: colors.incomeLight }]}>
+            <CheckCheck size={32} color={colors.income} strokeWidth={1.5} />
           </View>
-          <Text
-            style={[
-              styles.stateTitle,
-              {
-                color: colors.text,
-                fontSize: typography.size.base,
-                fontWeight: typography.weight.semibold,
-              },
-            ]}
-          >
+          <Text style={[styles.stateTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
             All caught up!
           </Text>
-          <Text
-            style={[
-              styles.stateLabel,
-              { color: colors.textMuted, fontSize: typography.size.sm },
-            ]}
-          >
+          <Text style={[styles.stateLabel, { color: colors.textMuted, fontSize: typography.size.sm }]}>
             No pending bank SMS transactions.
           </Text>
         </View>
       )}
 
-      {/* ── List ── */}
-      {!loading && drafts.length > 0 && (
-        <FlatList
-          data={drafts}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 14,
-            paddingTop: 12,
-            paddingBottom: insets.bottom + 28,
-          }}
-          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-          removeClippedSubviews
-          maxToRenderPerBatch={8}
-          windowSize={10}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadTransactions(true)}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          renderItem={({ item }) => (
-            <DraftCard
-              draft={item}
-              matchedAccount={matchAccount(item, accounts)}
-              onAccept={() => handleAccept(item)}
-              onDismiss={() => handleDismiss(item.id)}
-              colors={colors}
-              typography={typography}
-            />
-          )}
-        />
+      {!loading && !error && tab !== "pending" && (tab === "accepted" ? accepted : dismissed).length === 0 && (
+        <View style={styles.center}>
+          <Text style={[styles.stateTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
+            Nothing here
+          </Text>
+          <Text style={[styles.stateLabel, { color: colors.textMuted, fontSize: typography.size.sm }]}>
+            No {tab} transactions yet.
+          </Text>
+        </View>
       )}
+
+      {/* ── List ── */}
+      {!loading && (() => {
+        const listData = tab === "pending" ? drafts : tab === "accepted" ? accepted : dismissed;
+        if (listData.length === 0) return null;
+        return (
+          <FlatList
+            data={listData}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: insets.bottom + 28 }}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            removeClippedSubviews
+            maxToRenderPerBatch={8}
+            windowSize={10}
+            refreshControl={
+              tab === "pending" ? (
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={() => loadTransactions(true)}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                />
+              ) : undefined
+            }
+            renderItem={({ item }) => (
+              <DraftCard
+                draft={item}
+                matchedAccount={matchAccount(item, accounts)}
+                onAccept={tab === "pending" ? () => handleAccept(item) : () => {}}
+                onDismiss={tab === "pending" ? () => handleDismiss(item.id) : () => {}}
+                colors={colors}
+                typography={typography}
+              />
+            )}
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -622,6 +615,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addAllLabel: {},
+
+  // Tabs
+  tabsRow: {
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 10,
+  },
+  tabBtnText: { fontSize: 12.5, fontWeight: "600" },
+  tabBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
+  tabBadgeText: { fontSize: 10, fontWeight: "600" },
 
   // Banner
   banner: {

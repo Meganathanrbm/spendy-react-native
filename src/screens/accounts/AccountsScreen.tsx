@@ -8,7 +8,8 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Plus, CirclePlus } from "lucide-react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -17,7 +18,6 @@ import {
   useUpdateAccount,
   useDeleteAccount,
 } from "../../hooks/useAccounts";
-import { useTransactions } from "../../hooks/useTransactions";
 import { formatCurrency } from "../../lib/helpers/currency";
 import { layout } from "../../theme/spacing";
 import { Account } from "../../types";
@@ -31,7 +31,6 @@ export default function AccountsScreen() {
   const insets = useSafeAreaInsets();
 
   const { data: accounts = [], isLoading, refetch } = useAccounts();
-  const { data: transactions = [] } = useTransactions();
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
 
@@ -43,15 +42,6 @@ export default function AccountsScreen() {
     [accounts],
   );
 
-  const { totalIncome, totalExpense } = useMemo(() => {
-    let totalIncome = 0;
-    let totalExpense = 0;
-    for (const t of transactions) {
-      if (t.type === "income") totalIncome += t.amount;
-      else if (t.type === "expense") totalExpense += t.amount;
-    }
-    return { totalIncome, totalExpense };
-  }, [transactions]);
 
   const handleSetPrimary = useCallback(async (id: string) => {
     const account = accounts.find((a) => a.id === id);
@@ -97,12 +87,6 @@ export default function AccountsScreen() {
     setEditingAccount(undefined);
   }, []);
 
-  const breakdownData = useMemo(() =>
-    accounts.map((a) => ({
-      ...a,
-      pct: netWorth > 0 ? (a.balance / netWorth) * 100 : 0,
-    })),
-  [accounts, netWorth]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -110,7 +94,7 @@ export default function AccountsScreen() {
         title="Accounts"
         rightElement={
           <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
-            <Ionicons name="add" size={24} color={colors.primary} />
+            <Plus size={24} color={colors.primary} strokeWidth={1.7} />
           </TouchableOpacity>
         }
       />
@@ -130,18 +114,16 @@ export default function AccountsScreen() {
       >
         {/* Net Worth card */}
         <View
-          style={[styles.netWorthCard, { backgroundColor: colors.primary }]}
+          style={[styles.netWorthCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text
-            style={[styles.netWorthLabel, { color: "rgba(255,255,255,0.7)" }]}
-          >
-            NET WORTH
+          <Text style={[styles.netWorthLabel, { color: colors.textMuted }]}>
+            Net worth
           </Text>
           <Text
             style={[
               styles.netWorthAmount,
               {
-                color: "#fff",
+                color: colors.text,
                 fontSize: typography.size["3xl"],
                 fontWeight: typography.weight.extrabold,
               },
@@ -149,74 +131,9 @@ export default function AccountsScreen() {
           >
             {formatCurrency(netWorth)}
           </Text>
-          <View style={styles.netWorthStats}>
-            <View style={styles.netWorthStat}>
-              <Ionicons
-                name="arrow-down-circle-outline"
-                size={14}
-                color="#A7F3D0"
-              />
-              <Text
-                style={[
-                  styles.netWorthStatLabel,
-                  { color: "rgba(255,255,255,0.7)" },
-                ]}
-              >
-                Income
-              </Text>
-              <Text style={[styles.netWorthStatVal, { color: "#fff" }]}>
-                {formatCurrency(totalIncome, { compact: true })}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.netWorthDivider,
-                { backgroundColor: "rgba(255,255,255,0.2)" },
-              ]}
-            />
-            <View style={styles.netWorthStat}>
-              <Ionicons
-                name="arrow-up-circle-outline"
-                size={14}
-                color="#FCA5A5"
-              />
-              <Text
-                style={[
-                  styles.netWorthStatLabel,
-                  { color: "rgba(255,255,255,0.7)" },
-                ]}
-              >
-                Expense
-              </Text>
-              <Text style={[styles.netWorthStatVal, { color: "#fff" }]}>
-                {formatCurrency(totalExpense, { compact: true })}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.netWorthDivider,
-                { backgroundColor: "rgba(255,255,255,0.2)" },
-              ]}
-            />
-            <View style={styles.netWorthStat}>
-              <Ionicons
-                name="wallet-outline"
-                size={14}
-                color="rgba(255,255,255,0.8)"
-              />
-              <Text
-                style={[
-                  styles.netWorthStatLabel,
-                  { color: "rgba(255,255,255,0.7)" },
-                ]}
-              >
-                Accounts
-              </Text>
-              <Text style={[styles.netWorthStatVal, { color: "#fff" }]}>
-                {accounts.length}
-              </Text>
-            </View>
-          </View>
+          <Text style={[styles.netWorthSub, { color: colors.textMuted }]}>
+            Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}
+          </Text>
         </View>
 
         {/* Accounts list */}
@@ -227,7 +144,7 @@ export default function AccountsScreen() {
               { color: colors.textMuted, fontSize: typography.size.xs },
             ]}
           >
-            ALL ACCOUNTS
+            YOUR ACCOUNTS
           </Text>
           {accounts.map((account) => (
             <AccountCard
@@ -245,11 +162,7 @@ export default function AccountsScreen() {
             style={[styles.addCard, { borderColor: colors.border }]}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="add-circle-outline"
-              size={22}
-              color={colors.textMuted}
-            />
+            <CirclePlus size={22} color={colors.textMuted} strokeWidth={1.7} />
             <Text
               style={[
                 styles.addCardText,
@@ -261,71 +174,6 @@ export default function AccountsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Breakdown */}
-        {accounts.length > 0 && (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: colors.textMuted,
-                  fontSize: typography.size.xs,
-                  paddingHorizontal: 0,
-                  marginBottom: 12,
-                },
-              ]}
-            >
-              BALANCE BREAKDOWN
-            </Text>
-            {breakdownData.map((account) => (
-              <View key={account.id} style={styles.breakdownRow}>
-                <Text style={[styles.breakdownIcon]}>{account.icon}</Text>
-                <Text
-                  style={[
-                    styles.breakdownName,
-                    {
-                      color: colors.text,
-                      fontSize: typography.size.sm,
-                      flex: 1,
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {account.name}
-                </Text>
-                <View
-                  style={[
-                    styles.breakdownBarTrack,
-                    { backgroundColor: colors.surfaceAlt, flex: 2 },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.breakdownBarFill,
-                      {
-                        backgroundColor: account.color,
-                        width: `${Math.max(account.pct, 1)}%`,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.breakdownPct,
-                    { color: colors.textMuted, fontSize: typography.size.xs },
-                  ]}
-                >
-                  {account.pct.toFixed(0)}%
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
       </ScrollView>
 
       <AddAccountModal
@@ -348,21 +196,13 @@ const styles = StyleSheet.create({
   netWorthCard: {
     margin: 16,
     borderRadius: layout.cardRadius,
+    borderWidth: StyleSheet.hairlineWidth,
     padding: 20,
     gap: 4,
   },
-  netWorthLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  netWorthLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
   netWorthAmount: { marginTop: 4 },
-  netWorthStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-    gap: 12,
-  },
-  netWorthStat: { flex: 1, alignItems: "center", gap: 3 },
-  netWorthStatLabel: { fontSize: 10 },
-  netWorthStatVal: { fontSize: 13, fontWeight: "600" },
-  netWorthDivider: { width: 1, height: 28 },
+  netWorthSub: { fontSize: 11, marginTop: 2 },
   section: { paddingHorizontal: 16, gap: 10 },
   sectionTitle: {
     fontWeight: "700",
@@ -383,22 +223,4 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addCardText: {},
-  card: {
-    margin: 16,
-    marginTop: 8,
-    borderRadius: layout.cardRadius,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 16,
-  },
-  breakdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  breakdownIcon: { fontSize: 16, width: 24, textAlign: "center" },
-  breakdownName: {},
-  breakdownBarTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  breakdownBarFill: { height: 6, borderRadius: 3 },
-  breakdownPct: { width: 30, textAlign: "right" },
 });

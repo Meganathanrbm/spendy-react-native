@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { X } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,7 +59,7 @@ export default function SetBudgetScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-          <Ionicons name="close" size={22} color={colors.text} />
+          <X size={22} color={colors.text} strokeWidth={1.7} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontSize: typography.size.md, fontWeight: typography.weight.semibold }]}>
           {existingLimit ? "Edit Budget" : "Set Budget"}

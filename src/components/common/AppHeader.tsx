@@ -1,10 +1,12 @@
+// Spendy 2.0 — App header: menu left, centered title, optional right slot.
+// Background matches screen bg. Hairline bottom border.
 import React, { useRef, useCallback, memo } from "react";
 import { View, Text, Pressable, StyleSheet, Animated } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../hooks/useTheme";
 import { useDrawer } from "../../contexts/DrawerContext";
-import { layout } from "../../theme/spacing";
+import type { LucideIcon } from "lucide-react-native";
+import { Menu, Search } from "lucide-react-native";
 
 type Props = {
   title: string;
@@ -13,14 +15,14 @@ type Props = {
   rightElement?: React.ReactNode;
 };
 
-// Reusable spring-press icon button
+// Reusable spring-press icon button (36×36 touch target)
 export const IconBtn = memo(function IconBtn({
-  name,
-  size = 24,
+  icon: Icon,
+  size = 20,
   onPress,
   color,
 }: {
-  name: keyof typeof Ionicons.glyphMap;
+  icon: LucideIcon;
   size?: number;
   onPress?: () => void;
   color: string;
@@ -28,11 +30,21 @@ export const IconBtn = memo(function IconBtn({
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = useCallback(() =>
-    Animated.spring(scale, { toValue: 0.80, useNativeDriver: true, speed: 60, bounciness: 0 }).start(),
+    Animated.spring(scale, {
+      toValue: 0.82,
+      useNativeDriver: true,
+      speed: 60,
+      bounciness: 0,
+    }).start(),
   []);
 
   const onPressOut = useCallback(() =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 12 }).start(),
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 10,
+    }).start(),
   []);
 
   return (
@@ -44,14 +56,19 @@ export const IconBtn = memo(function IconBtn({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <Ionicons name={name} size={size} color={color} />
+        <Icon size={size} color={color} strokeWidth={1.7} />
       </Animated.View>
     </Pressable>
   );
 });
 
-const AppHeader = memo(function AppHeader({ title, onMenuPress, onSearchPress, rightElement }: Props) {
-  const { colors, typography } = useTheme();
+const AppHeader = memo(function AppHeader({
+  title,
+  onMenuPress,
+  onSearchPress,
+  rightElement,
+}: Props) {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { openDrawer } = useDrawer();
 
@@ -60,37 +77,32 @@ const AppHeader = memo(function AppHeader({ title, onMenuPress, onSearchPress, r
       style={[
         styles.container,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           borderBottomColor: colors.border,
           paddingTop: insets.top + 4,
         },
       ]}
     >
       <IconBtn
-        name="menu"
-        size={24}
+        icon={Menu}
+        size={22}
         onPress={onMenuPress ?? openDrawer}
         color={colors.text}
       />
 
       <Text
-        style={[
-          styles.title,
-          {
-            color: colors.text,
-            fontSize: typography.size.md,
-            fontWeight: typography.weight.semibold,
-          },
-        ]}
+        style={[styles.title, { color: colors.text }]}
         numberOfLines={1}
       >
         {title}
       </Text>
 
-      {rightElement ?? (
+      {rightElement !== undefined ? (
+        rightElement
+      ) : (
         <IconBtn
-          name="search-outline"
-          size={22}
+          icon={Search}
+          size={20}
           onPress={onSearchPress}
           color={colors.text}
         />
@@ -106,9 +118,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: layout.headerHeight + 44,
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: 10,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iconBtn: {
@@ -120,5 +132,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: "center",
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
   },
 });

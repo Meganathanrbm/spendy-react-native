@@ -6,7 +6,8 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronDown } from "lucide-react-native";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
 import { getAllCategories } from "../../lib/helpers/categories";
 import BottomSheet from "../common/BottomSheet";
@@ -49,7 +50,7 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
           {selected ? (
             <>
               <View style={[styles.iconDot, { backgroundColor: selected.color + "33" }]}>
-                <Text style={{ fontSize: 14 }}>{selected.icon}</Text>
+                {(() => { const Icon = getCategoryIcon(selected.name); return <Icon size={14} color={selected.color} strokeWidth={1.7} />; })()}
               </View>
               <Text
                 style={[styles.valueName, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.medium }]}
@@ -61,20 +62,25 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
           ) : (
             <Text style={[styles.valueName, { color: colors.textMuted }]}>Select…</Text>
           )}
-          <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+          <ChevronDown size={14} color={colors.textMuted} strokeWidth={1.7} />
         </View>
       </TouchableOpacity>
 
-      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={0.65}>
-        <Text style={[styles.sheetTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>
-          Category
-        </Text>
+      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={0.7}>
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>
+            Category
+          </Text>
+          <Text style={[styles.sheetSub, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+            {transactionType === "income" ? "Income source" : "Where did the money go?"}
+          </Text>
+        </View>
         <FlatList
           data={categories}
           keyExtractor={(c) => c.id}
-          numColumns={3}
+          numColumns={4}
           columnWrapperStyle={styles.grid}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 12 }}
           renderItem={({ item }) => {
             const isSelected = item.name === selectedName;
             return (
@@ -84,21 +90,22 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
                   styles.categoryCell,
                   {
                     borderColor: isSelected ? item.color : colors.border,
-                    borderWidth: isSelected ? 2 : 1,
-                    backgroundColor: isSelected ? item.color + "18" : colors.surfaceAlt,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    backgroundColor: isSelected ? item.color + "18" : "transparent",
                   },
+                  isSelected && { borderColor: item.color, borderWidth: 1.5 },
                 ]}
                 activeOpacity={0.7}
               >
-                <View style={[styles.categoryIcon, { backgroundColor: item.color + "28" }]}>
-                  <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                <View style={[styles.categoryIcon, { backgroundColor: item.color + "22" }]}>
+                  {(() => { const Icon = getCategoryIcon(item.name); return <Icon size={18} color={item.color} strokeWidth={1.7} />; })()}
                 </View>
                 <Text
                   style={[
                     styles.categoryName,
                     {
                       color: isSelected ? item.color : colors.text,
-                      fontSize: typography.size.xs,
+                      fontSize: 10,
                       fontWeight: isSelected ? typography.weight.semibold : typography.weight.regular,
                     },
                   ]}
@@ -137,25 +144,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   valueName: { flex: 1 },
-  sheetTitle: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
+  sheetHeader: { paddingHorizontal: 16, marginBottom: 12 },
+  sheetTitle: {},
+  sheetSub: { marginTop: 2 },
   grid: {
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 8,
   },
   categoryCell: {
     flex: 1,
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 10,
+    padding: 8,
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   categoryIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },

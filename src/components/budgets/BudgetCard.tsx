@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Pencil, Trash2, TriangleAlert } from "lucide-react-native";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency, formatPercent } from "../../lib/helpers/currency";
 import { layout } from "../../theme/spacing";
@@ -51,7 +52,7 @@ export default function BudgetCard({ data, onEdit, onDelete }: Props) {
       <View style={styles.topRow}>
         <View style={styles.left}>
           <View style={[styles.iconBox, { backgroundColor: categoryColor + "22" }]}>
-            <Text style={styles.icon}>{categoryIcon}</Text>
+            {(() => { const Icon = getCategoryIcon(categoryName); return <Icon size={20} color={categoryColor} strokeWidth={1.7} />; })()}
           </View>
           <View>
             <Text
@@ -75,10 +76,10 @@ export default function BudgetCard({ data, onEdit, onDelete }: Props) {
         {/* Menu */}
         <View style={styles.actions}>
           <TouchableOpacity onPress={onEdit} style={styles.actionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
+            <Pencil size={16} color={colors.textSecondary} strokeWidth={1.7} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onDelete} style={styles.actionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="trash-outline" size={16} color={colors.expense} />
+            <Trash2 size={16} color={colors.expense} strokeWidth={1.7} />
           </TouchableOpacity>
         </View>
       </View>
@@ -115,7 +116,7 @@ export default function BudgetCard({ data, onEdit, onDelete }: Props) {
       <View style={styles.bottomRow}>
         {isExceeded ? (
           <View style={styles.exceededBadge}>
-            <Ionicons name="warning" size={12} color={colors.expense} />
+            <TriangleAlert size={12} color={colors.expense} strokeWidth={1.7} />
             <Text style={[styles.exceededText, { color: colors.expense, fontSize: typography.size.xs }]}>
               Limit exceeded by {formatCurrency(Math.abs(remaining))}
             </Text>
