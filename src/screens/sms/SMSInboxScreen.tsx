@@ -11,8 +11,17 @@ import {
   RefreshControl,
 } from "react-native";
 import {
-  ArrowDown, ArrowUp, CircleCheck, CreditCard, Info,
-  X, Check, ArrowLeft, CheckCheck, Mail, RefreshCw,
+  ArrowDown,
+  ArrowUp,
+  CircleCheck,
+  CreditCard,
+  Info,
+  X,
+  Check,
+  ArrowLeft,
+  CheckCheck,
+  Mail,
+  RefreshCw,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -20,7 +29,10 @@ import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
 import { useAccounts } from "../../hooks/useAccounts";
-import { useSaveTransaction, useTransactionsByPeriod } from "../../hooks/useTransactions";
+import {
+  useSaveTransaction,
+  useTransactionsByPeriod,
+} from "../../hooks/useTransactions";
 import {
   fetchParsedBankTransactions,
   requestSMSPermission,
@@ -84,7 +96,11 @@ const DraftCard = ({
       <View style={[styles.topStrip, { backgroundColor: accentBg }]}>
         <View style={styles.topLeft}>
           <View style={[styles.typeIcon, { backgroundColor: amountColor }]}>
-            {isCredit ? <ArrowDown size={10} color="#fff" strokeWidth={2} /> : <ArrowUp size={10} color="#fff" strokeWidth={2} />}
+            {isCredit ? (
+              <ArrowDown size={10} color="#fff" strokeWidth={2} />
+            ) : (
+              <ArrowUp size={10} color="#fff" strokeWidth={2} />
+            )}
           </View>
           <Text
             style={[
@@ -171,7 +187,11 @@ const DraftCard = ({
             </View>
           ) : draft.parsedLastFour ? (
             <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-              <CreditCard size={11} color={colors.textMuted} strokeWidth={1.7} />
+              <CreditCard
+                size={11}
+                color={colors.textMuted}
+                strokeWidth={1.7}
+              />
               <Text style={[styles.chipText, { color: colors.textMuted }]}>
                 ••••{draft.parsedLastFour}
               </Text>
@@ -208,7 +228,6 @@ const DraftCard = ({
           onPress={onDismiss}
           style={[styles.actionBtn, { borderColor: colors.border }]}
         >
-          <X size={16} color={colors.textMuted} strokeWidth={1.7} />
           <Text
             style={[
               styles.actionLabel,
@@ -225,18 +244,18 @@ const DraftCard = ({
             { backgroundColor: colors.primary, borderColor: colors.primary },
           ]}
         >
-          <Check size={16} color="#fff" strokeWidth={2} />
+          <Check size={16} color="#000" strokeWidth={2} />
           <Text
             style={[
               styles.actionLabel,
               {
-                color: "#fff",
+                color: "#000",
                 fontSize: typography.size.sm,
                 fontWeight: typography.weight.semibold,
               },
             ]}
           >
-            Add Transaction
+           Accept
           </Text>
         </TouchableOpacity>
       </View>
@@ -257,37 +276,46 @@ export default function SMSInboxScreen() {
   const [drafts, setDrafts] = useState<SMSDraft[]>([]);
   const [accepted, setAccepted] = useState<SMSDraft[]>([]);
   const [dismissed, setDismissed] = useState<SMSDraft[]>([]);
-  const [tab, setTab] = useState<"pending" | "accepted" | "dismissed">("pending");
+  const [tab, setTab] = useState<"pending" | "accepted" | "dismissed">(
+    "pending",
+  );
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  const loadTransactions = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const loadTransactions = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setError(null);
 
-    try {
-      const granted = await requestSMSPermission();
-      setHasPermission(granted);
-      if (!granted) {
-        setError(
-          "SMS permission denied. Enable it in Settings → Apps → Spendy → Permissions.",
+      try {
+        const granted = await requestSMSPermission();
+        setHasPermission(granted);
+        if (!granted) {
+          setError(
+            "SMS permission denied. Enable it in Settings → Apps → Spendy → Permissions.",
+          );
+          return;
+        }
+        const results = await fetchParsedBankTransactions(
+          30,
+          existingTransactions,
+          accounts,
         );
-        return;
+        setDrafts(results);
+        if (results.length === 0)
+          setError("No bank SMS found in the last 30 days.");
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to read SMS.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-      const results = await fetchParsedBankTransactions(30, existingTransactions, accounts);
-      setDrafts(results);
-      if (results.length === 0)
-        setError("No bank SMS found in the last 30 days.");
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to read SMS.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [existingTransactions]);
+    },
+    [existingTransactions],
+  );
 
   useEffect(() => {
     if (Platform.OS === "android") loadTransactions();
@@ -424,23 +452,54 @@ export default function SMSInboxScreen() {
       {/* ── Tabs ── */}
       <View style={[styles.tabsRow, { borderBottomColor: colors.border }]}>
         {(["pending", "accepted", "dismissed"] as const).map((t) => {
-          const count = t === "pending" ? drafts.length : t === "accepted" ? accepted.length : dismissed.length;
+          const count =
+            t === "pending"
+              ? drafts.length
+              : t === "accepted"
+                ? accepted.length
+                : dismissed.length;
           return (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
               style={[
                 styles.tabBtn,
-                tab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                tab === t && {
+                  borderBottomColor: colors.primary,
+                  borderBottomWidth: 2,
+                },
               ]}
               activeOpacity={0.7}
             >
-              <Text style={[styles.tabBtnText, { color: tab === t ? colors.text : colors.textMuted }]}>
+              <Text
+                style={[
+                  styles.tabBtnText,
+                  { color: tab === t ? colors.text : colors.textMuted },
+                ]}
+              >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
               {count > 0 && (
-                <View style={[styles.tabBadge, { backgroundColor: t === "pending" ? colors.primaryMuted : colors.surfaceAlt }]}>
-                  <Text style={[styles.tabBadgeText, { color: t === "pending" ? colors.primary : colors.textMuted }]}>
+                <View
+                  style={[
+                    styles.tabBadge,
+                    {
+                      backgroundColor:
+                        t === "pending"
+                          ? colors.primaryMuted
+                          : colors.surfaceAlt,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      {
+                        color:
+                          t === "pending" ? colors.primary : colors.textMuted,
+                      },
+                    ]}
+                  >
                     {count}
                   </Text>
                 </View>
@@ -522,67 +581,121 @@ export default function SMSInboxScreen() {
       )}
 
       {/* ── Empty state ── */}
-      {!loading && !error && tab === "pending" && drafts.length === 0 && hasPermission && (
-        <View style={styles.center}>
-          <View style={[styles.stateIcon, { backgroundColor: colors.incomeLight }]}>
-            <CheckCheck size={32} color={colors.income} strokeWidth={1.5} />
+      {!loading &&
+        !error &&
+        tab === "pending" &&
+        drafts.length === 0 &&
+        hasPermission && (
+          <View style={styles.center}>
+            <View
+              style={[
+                styles.stateIcon,
+                { backgroundColor: colors.incomeLight },
+              ]}
+            >
+              <CheckCheck size={32} color={colors.income} strokeWidth={1.5} />
+            </View>
+            <Text
+              style={[
+                styles.stateTitle,
+                {
+                  color: colors.text,
+                  fontSize: typography.size.base,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              All caught up!
+            </Text>
+            <Text
+              style={[
+                styles.stateLabel,
+                { color: colors.textMuted, fontSize: typography.size.sm },
+              ]}
+            >
+              No pending bank SMS transactions.
+            </Text>
           </View>
-          <Text style={[styles.stateTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
-            All caught up!
-          </Text>
-          <Text style={[styles.stateLabel, { color: colors.textMuted, fontSize: typography.size.sm }]}>
-            No pending bank SMS transactions.
-          </Text>
-        </View>
-      )}
+        )}
 
-      {!loading && !error && tab !== "pending" && (tab === "accepted" ? accepted : dismissed).length === 0 && (
-        <View style={styles.center}>
-          <Text style={[styles.stateTitle, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.semibold }]}>
-            Nothing here
-          </Text>
-          <Text style={[styles.stateLabel, { color: colors.textMuted, fontSize: typography.size.sm }]}>
-            No {tab} transactions yet.
-          </Text>
-        </View>
-      )}
+      {!loading &&
+        !error &&
+        tab !== "pending" &&
+        (tab === "accepted" ? accepted : dismissed).length === 0 && (
+          <View style={styles.center}>
+            <Text
+              style={[
+                styles.stateTitle,
+                {
+                  color: colors.text,
+                  fontSize: typography.size.base,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              Nothing here
+            </Text>
+            <Text
+              style={[
+                styles.stateLabel,
+                { color: colors.textMuted, fontSize: typography.size.sm },
+              ]}
+            >
+              No {tab} transactions yet.
+            </Text>
+          </View>
+        )}
 
       {/* ── List ── */}
-      {!loading && (() => {
-        const listData = tab === "pending" ? drafts : tab === "accepted" ? accepted : dismissed;
-        if (listData.length === 0) return null;
-        return (
-          <FlatList
-            data={listData}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: insets.bottom + 28 }}
-            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-            removeClippedSubviews
-            maxToRenderPerBatch={8}
-            windowSize={10}
-            refreshControl={
-              tab === "pending" ? (
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={() => loadTransactions(true)}
-                  tintColor={colors.primary}
-                  colors={[colors.primary]}
+      {!loading &&
+        (() => {
+          const listData =
+            tab === "pending"
+              ? drafts
+              : tab === "accepted"
+                ? accepted
+                : dismissed;
+          if (listData.length === 0) return null;
+          return (
+            <FlatList
+              data={listData}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{
+                paddingHorizontal: 14,
+                paddingTop: 12,
+                paddingBottom: insets.bottom + 28,
+              }}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              removeClippedSubviews
+              maxToRenderPerBatch={8}
+              windowSize={10}
+              refreshControl={
+                tab === "pending" ? (
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={() => loadTransactions(true)}
+                    tintColor={colors.primary}
+                    colors={[colors.primary]}
+                  />
+                ) : undefined
+              }
+              renderItem={({ item }) => (
+                <DraftCard
+                  draft={item}
+                  matchedAccount={matchAccount(item, accounts)}
+                  onAccept={
+                    tab === "pending" ? () => handleAccept(item) : () => {}
+                  }
+                  onDismiss={
+                    tab === "pending" ? () => handleDismiss(item.id) : () => {}
+                  }
+                  colors={colors}
+                  typography={typography}
                 />
-              ) : undefined
-            }
-            renderItem={({ item }) => (
-              <DraftCard
-                draft={item}
-                matchedAccount={matchAccount(item, accounts)}
-                onAccept={tab === "pending" ? () => handleAccept(item) : () => {}}
-                onDismiss={tab === "pending" ? () => handleDismiss(item.id) : () => {}}
-                colors={colors}
-                typography={typography}
-              />
-            )}
-          />
-        );
-      })()}
+              )}
+            />
+          );
+        })()}
     </View>
   );
 }

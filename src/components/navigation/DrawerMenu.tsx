@@ -1,4 +1,3 @@
-// Spendy 2.0 — Slide-in drawer. Profile header, sectioned menu, footer.
 import React, { useRef, useEffect } from "react";
 import {
   View,
@@ -56,42 +55,6 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
   const { toggleTheme, mode } = useThemeContext();
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const slideX = useRef(new Animated.Value(-DRAWER_W)).current;
-  const backdropOp = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      slideX.setValue(-DRAWER_W);
-      backdropOp.setValue(0);
-      Animated.parallel([
-        Animated.spring(slideX, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 80,
-          friction: 16,
-        }),
-        Animated.timing(backdropOp, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideX, {
-          toValue: -DRAWER_W,
-          duration: 240,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOp, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
 
   const navigate = (screen: string) => {
     onClose();
@@ -193,16 +156,16 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
       onRequestClose={onClose}
     >
       {/* Animated backdrop */}
-      <Animated.View style={[styles.backdrop, { opacity: backdropOp }]}>
+      <View style={styles.backdrop}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={onClose}
         />
-      </Animated.View>
+      </View>
 
       {/* Drawer panel */}
-      <Animated.View
+      <View
         style={[
           styles.drawer,
           {
@@ -210,7 +173,6 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
             backgroundColor: colors.background,
             borderRightColor: colors.border,
             paddingBottom: insets.bottom + 12,
-            transform: [{ translateX: slideX }],
           },
         ]}
       >
@@ -333,7 +295,7 @@ export default function DrawerMenu({ visible, onClose, onNavigate }: Props) {
             Spendy 2.0 · Local-first
           </Text>
         </View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }

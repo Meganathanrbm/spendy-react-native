@@ -12,19 +12,18 @@ type Props = {
 };
 
 export default function DateGroupHeader({ date, transactions }: Props) {
-  const { colors, typography } = useTheme();
+  const { colors } = useTheme();
 
   // Daily totals
-  const dayIncome  = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const dayExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const dayIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + t.amount, 0);
+  const dayExpense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + t.amount, 0);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text
         style={[
           styles.dateLabel,
@@ -41,12 +40,17 @@ export default function DateGroupHeader({ date, transactions }: Props) {
 
       <View style={styles.totals}>
         {dayIncome > 0 && (
-          <Text style={[styles.total, { color: colors.primary, fontSize: 11 }]}>
+          <Text style={[styles.total, { color: colors.income, fontSize: 11 }]}>
             +{formatCurrency(dayIncome, { compact: true })}
           </Text>
         )}
         {dayExpense > 0 && (
-          <Text style={[styles.total, { color: colors.textMuted, fontSize: 11 }]}>
+          <Text
+            style={[
+              styles.total,
+              { color: colors.expenseAccent, fontSize: 11 },
+            ]}
+          >
             −{formatCurrency(dayExpense, { compact: true })}
           </Text>
         )}
@@ -61,7 +65,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: layout.screenPadding,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    margin: 2,
   },
   dateLabel: {},
   totals: {

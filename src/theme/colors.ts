@@ -1,6 +1,3 @@
-// Spendy 2.0 — Near-monochrome dark design system
-// Accent: Emerald (#34D399). Three surfaces, one accent, monospaced numerals.
-
 export const lightColors = {
   // Backgrounds
   background: "#FAF7F2",
@@ -70,15 +67,13 @@ export const lightColors = {
   shimmer: "#E9E4DC",
 };
 
-// Spendy 2.0 — Notion/Vercel-flavored near-black dark theme
 export const darkColors: typeof lightColors = {
-  // Backgrounds — 3 surface levels, elevation via color shift only (no shadows)
-  background: "#0A0A0A",   // Page / screen bg
-  surface: "#101010",      // Cards, list items
-  surfaceAlt: "#161616",   // Inputs, nested cards
-  surface2: "#161616",     // Inputs, nested surfaces
+  background: "#0A0A0A", // Page / screen bg
+  surface: "#101010", // Cards, list items
+  surfaceAlt: "#161616", // Inputs, nested cards
+  surface2: "#161616", // Inputs, nested surfaces
   surfaceElevated: "#1C1C1C", // Hover / pressed
-  surface3: "#1C1C1C",    // Active / pressed states
+  surface3: "#1C1C1C", // Active / pressed states
 
   // Brand — Emerald accent (income, primary actions)
   primary: "#34D399",
@@ -97,11 +92,11 @@ export const darkColors: typeof lightColors = {
   transferLight: "#1A2440",
 
   // Text — 4-level hierarchy
-  text: "#EDEDED",          // Primary body
+  text: "#EDEDED", // Primary body
   textSecondary: "#A1A1A1", // Secondary labels
-  textMuted: "#5A5A5A",     // Captions, section labels
-  textFaint: "#3A3A3A",     // Disabled / placeholder
-  textInverse: "#0A0A0A",   // Text on primary bg
+  textMuted: "#5A5A5A", // Captions, section labels
+  textFaint: "#3A3A3A", // Disabled / placeholder
+  textInverse: "#0A0A0A", // Text on primary bg
 
   // Border & Divider — hairline only
   border: "#1F1F1F",

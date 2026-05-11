@@ -1,11 +1,5 @@
 import React, { useRef, useCallback, memo } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Animated,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, Animated } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { formatCurrency } from "../../lib/helpers/currency";
 import { formatTime } from "../../lib/helpers/date";
@@ -24,17 +18,24 @@ type Props = {
 const ICON_SIZE = 36;
 const ICON_RADIUS = Math.round(ICON_SIZE * 0.31); // ~11px
 
-const TransactionItem = memo(function TransactionItem({ transaction, onPress, onLongPress }: Props) {
+const TransactionItem = memo(function TransactionItem({
+  transaction,
+  onPress,
+  onLongPress,
+}: Props) {
   const { colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
   const iconScale = useRef(new Animated.Value(1)).current;
 
-  const isExpense  = transaction.type === "expense";
+  const isExpense = transaction.type === "expense";
   const isTransfer = transaction.type === "transfer";
-  const isIncome   = transaction.type === "income";
+  const isIncome = transaction.type === "income";
 
-  // Spendy 2.0: expense = neutral text (sign carries meaning), income = primary, transfer = blue
-  const amountColor = isTransfer ? colors.transfer : isIncome ? colors.primary : colors.text;
+  const amountColor = isTransfer
+    ? colors.transfer
+    : isIncome
+      ? colors.primary
+      : colors.expenseAccent;
   const amountPrefix = isExpense ? "−" : isIncome ? "+" : "";
 
   // Icon box: category-specific color tinted at ~14% opacity
@@ -42,27 +43,64 @@ const TransactionItem = memo(function TransactionItem({ transaction, onPress, on
     ? colors.transfer
     : getCategoryColor(transaction.category);
   const iconBgColor = categoryColor + "22"; // 14% opacity
-  const CategoryIcon = isTransfer ? ArrowLeftRight : getCategoryIcon(transaction.category);
+  const CategoryIcon = isTransfer
+    ? ArrowLeftRight
+    : getCategoryIcon(transaction.category);
 
   const onPressIn = useCallback(() => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 0.985, useNativeDriver: true, speed: 50, bounciness: 0 }),
-      Animated.spring(iconScale, { toValue: 0.88, useNativeDriver: true, speed: 50, bounciness: 0 }),
+      Animated.spring(scale, {
+        toValue: 0.985,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 0,
+      }),
+      Animated.spring(iconScale, {
+        toValue: 0.88,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 0,
+      }),
     ]).start();
   }, []);
 
   const onPressOut = useCallback(() => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
-      Animated.spring(iconScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 8,
+      }),
+      Animated.spring(iconScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 12,
+      }),
     ]).start();
   }, []);
 
   const onLongPressHandler = useCallback(() => {
     Animated.sequence([
-      Animated.spring(scale, { toValue: 0.94, useNativeDriver: true, speed: 60, bounciness: 0 }),
-      Animated.spring(scale, { toValue: 1.02, useNativeDriver: true, speed: 30, bounciness: 4 }),
-      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 20, bounciness: 0 }),
+      Animated.spring(scale, {
+        toValue: 0.94,
+        useNativeDriver: true,
+        speed: 60,
+        bounciness: 0,
+      }),
+      Animated.spring(scale, {
+        toValue: 1.02,
+        useNativeDriver: true,
+        speed: 30,
+        bounciness: 4,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 0,
+      }),
     ]).start();
     onLongPress?.(transaction);
   }, [onLongPress, transaction]);
@@ -75,15 +113,28 @@ const TransactionItem = memo(function TransactionItem({ transaction, onPress, on
       onLongPress={onLongPressHandler}
       delayLongPress={380}
     >
-      <Animated.View style={[styles.container, { borderBottomColor: colors.border, transform: [{ scale }] }]}>
+      <Animated.View
+        style={[
+          styles.container,
+          { borderBottomColor: colors.border, transform: [{ scale }] },
+        ]}
+      >
         {/* Icon box — category-color tinted rounded square */}
-        <Animated.View style={[styles.iconBox, { backgroundColor: iconBgColor, transform: [{ scale: iconScale }] }]}>
+        <Animated.View
+          style={[
+            styles.iconBox,
+            { backgroundColor: iconBgColor, transform: [{ scale: iconScale }] },
+          ]}
+        >
           <CategoryIcon size={18} color={categoryColor} strokeWidth={1.7} />
         </Animated.View>
 
         {/* Details */}
         <View style={styles.middle}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {transaction.title}
           </Text>
           <View style={styles.metaRow}>
@@ -93,8 +144,17 @@ const TransactionItem = memo(function TransactionItem({ transaction, onPress, on
               {formatTime(transaction.date)}
             </Text>
             {transaction.isAutoDetected && (
-              <View style={[styles.smsBadge, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.smsBadgeText, { color: colors.textSecondary }]}>SMS</Text>
+              <View
+                style={[
+                  styles.smsBadge,
+                  { backgroundColor: colors.surfaceElevated },
+                ]}
+              >
+                <Text
+                  style={[styles.smsBadgeText, { color: colors.textSecondary }]}
+                >
+                  SMS
+                </Text>
               </View>
             )}
           </View>
@@ -102,7 +162,8 @@ const TransactionItem = memo(function TransactionItem({ transaction, onPress, on
 
         {/* Amount — tabular mono font */}
         <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{formatCurrency(transaction.amount)}
+          {amountPrefix}
+          {formatCurrency(transaction.amount)}
         </Text>
       </Animated.View>
     </Pressable>
@@ -116,7 +177,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: layout.screenPadding,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 12,
   },

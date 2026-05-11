@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useRef,
   useEffect,
-  memo,
 } from "react";
 import {
   View,
@@ -18,7 +17,7 @@ import {
   Animated,
   Pressable,
 } from "react-native";
-import { Search, X, Plus, CircleX } from "lucide-react-native";
+import { Search, Plus, CircleX } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,76 +33,15 @@ import { groupTransactionsByDate } from "../../lib/api/transactions";
 import { currentMonth } from "../../lib/helpers/date";
 import { layout } from "../../theme/spacing";
 import { RootStackParamList } from "../../navigation/types";
-import { Account, Transaction } from "../../types";
-
+import { Transaction } from "../../types";
 import AppHeader from "../../components/common/AppHeader";
-import MonthNavigator from "../../components/common/MonthNavigator";
-import SummaryBar from "../../components/records/SummaryBar";
-import AccountBanner from "../../components/records/AccountBanner";
 import DateGroupHeader from "../../components/records/DateGroupHeader";
 import TransactionItem from "../../components/records/TransactionItem";
 import TransactionDetailModal from "../../components/records/TransactionDetailModal";
+import { SearchButton } from "../../components/common/searchButton/SearchButton";
+import { ListHeader } from "../../components/records/ListHeader";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-type ListHeaderProps = {
-  account: Account | null;
-  income: number;
-  expense: number;
-  month: string;
-  onMonthChange: (m: string) => void;
-  onAccountPress: () => void;
-};
-
-const ListHeader = memo(function ListHeader({
-  account,
-  income,
-  expense,
-  month,
-  onMonthChange,
-  onAccountPress,
-}: ListHeaderProps) {
-  return (
-    <View>
-      <AccountBanner account={account} onPress={onAccountPress} />
-      <MonthNavigator month={month} onChange={onMonthChange} />
-      <SummaryBar income={income} expense={expense} />
-    </View>
-  );
-});
-
-// Stable memo component so AppHeader never gets a new `rightElement` element
-// identity when isSearching or colors change — avoids Pressable remounts.
-type SearchButtonProps = {
-  isSearching: boolean;
-  color: string;
-  spin: Animated.AnimatedInterpolation<string>;
-  onPress: () => void;
-};
-
-const SearchButton = memo(function SearchButton({
-  isSearching,
-  color,
-  spin,
-  onPress,
-}: SearchButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={searchBtnStyle}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-    >
-      <Animated.View style={{ transform: [{ rotate: spin }] }}>
-        {isSearching
-          ? <X size={22} color={color} strokeWidth={1.7} />
-          : <Search size={22} color={color} strokeWidth={1.7} />
-        }
-      </Animated.View>
-    </Pressable>
-  );
-});
-
-const searchBtnStyle = { width: 36, height: 36, alignItems: "center" as const, justifyContent: "center" as const };
 
 export default function RecordsScreen() {
   const { colors, typography } = useTheme();
@@ -114,7 +52,7 @@ export default function RecordsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-
+  console.log("selectedTx", selectedTx);
   const {
     data: transactions = [],
     isLoading,
@@ -132,11 +70,6 @@ export default function RecordsScreen() {
   const searchOp = useRef(new Animated.Value(0)).current;
   const fabPulse = useRef(new Animated.Value(1)).current;
   const fabPulseLoop = useRef<Animated.CompositeAnimation | null>(null);
-  // Stable interpolation — must not be recreated on each render or useMemo
-  // deps that reference it (searchIconNode) will invalidate every frame.
-  const fabSpin = useRef(
-    fabRotate.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }),
-  ).current;
 
   const startFabPulse = () => {
     fabPulseLoop.current = Animated.loop(
@@ -293,16 +226,35 @@ export default function RecordsScreen() {
 
   // handleSearchToggle is stable (no deps). fabSpin is a useRef. So this memo
   // only invalidates when isSearching or colors.text changes — both correct.
-  const searchRight = useMemo(
-    () => (
-      <SearchButton
-        isSearching={isSearching}
-        color={colors.text}
-        spin={fabSpin}
-        onPress={handleSearchToggle}
-      />
-    ),
-    [isSearching, colors.text, fabSpin, handleSearchToggle],
+  const searchRight = (
+    <SearchButton
+      isSearching={isSearching}
+      color={colors.text}
+      onPress={handleSearchToggle}
+    />
+  );
+
+  const ListEmptyComponent = (
+    <View style={styles.empty}>
+      <Text style={{ fontSize: 36 }}>📭</Text>
+      <Text
+        style={[
+          styles.emptyTitle,
+          {
+            color: colors.text,
+            fontSize: typography.size.lg,
+            fontWeight: typography.weight.semibold,
+          },
+        ]}
+      >
+        No transactions
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        {searchQuery
+          ? `No results for "${searchQuery}"`
+          : "Tap + to add your first transaction"}
+      </Text>
+    </View>
   );
 
   return (
@@ -310,34 +262,37 @@ export default function RecordsScreen() {
       <AppHeader title="Records" rightElement={searchRight} />
 
       {/* Animated search bar */}
-      <Animated.View
-        style={[styles.searchWrapper, { height: searchH, opacity: searchOp }]}
-      >
-        <View
-          style={[
-            styles.searchBar,
-            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-          ]}
-        >
-          <Search size={16} color={colors.textMuted} strokeWidth={1.7} />
-          <TextInput
-            autoFocus={isSearching}
-            placeholder="Search transactions..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+      {isSearching && (
+        <View style={styles.searchWrapper}>
+          <View
             style={[
-              styles.searchInput,
-              { color: colors.text, fontSize: typography.size.base },
+              styles.searchBar,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
             ]}
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery("")}>
-              <CircleX size={16} color={colors.textMuted} strokeWidth={1.7} />
-            </Pressable>
-          )}
+          >
+            <Search size={16} color={colors.textMuted} strokeWidth={1.7} />
+            <TextInput
+              autoFocus={isSearching}
+              placeholder="Search transactions..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={[
+                styles.searchInput,
+                { color: colors.text, fontSize: typography.size.base },
+              ]}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery("")}>
+                <CircleX size={16} color={colors.textMuted} strokeWidth={1.7} />
+              </Pressable>
+            )}
+          </View>
         </View>
-      </Animated.View>
+      )}
 
       <SectionList
         sections={sections}
@@ -353,30 +308,7 @@ export default function RecordsScreen() {
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         ItemSeparatorComponent={() => null}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>📭</Text>
-            <Text
-              style={[
-                styles.emptyTitle,
-                {
-                  color: colors.text,
-                  fontSize: typography.size.lg,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              No transactions
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-            >
-              {searchQuery
-                ? `No results for "${searchQuery}"`
-                : "Tap + to add your first transaction"}
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={ListEmptyComponent}
         stickySectionHeadersEnabled
         contentContainerStyle={{
           paddingBottom: layout.tabBarHeight + insets.bottom + 24,
@@ -386,11 +318,10 @@ export default function RecordsScreen() {
 
       <TransactionDetailModal
         transaction={selectedTx}
-        visible={!!selectedTx}
+        visible={Boolean(selectedTx)}
         onClose={() => setSelectedTx(null)}
       />
 
-      {/* Animated FAB — rounded square per Spendy 2.0 design */}
       <Pressable
         onPressIn={onFabPressIn}
         onPressOut={onFabPressOut}
@@ -455,7 +386,7 @@ const styles = StyleSheet.create({
   fab: {
     width: 52,
     height: 52,
-    borderRadius: 14,          // rounded square per Spendy 2.0
+    borderRadius: 14, // rounded square per Spendy 2.0
     alignItems: "center",
     justifyContent: "center",
     elevation: 8,

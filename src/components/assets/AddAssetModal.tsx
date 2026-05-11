@@ -139,7 +139,7 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
                   }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16 }}>{t.icon}</Text>
+                  <Text style={{ fontSize: 16 }}>{t?.icon}</Text>
                   <Text style={[styles.typeLabel, { color: active ? t.color : colors.text, fontWeight: active ? typography.weight.semibold : typography.weight.regular, fontSize: typography.size.xs }]}>
                     {t.label}
                   </Text>

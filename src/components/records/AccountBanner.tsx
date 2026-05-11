@@ -26,7 +26,10 @@ export default function AccountBanner({ account, onPress }: Props) {
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
     >
       <View style={styles.row}>
         {/* Icon box — account-color tinted rounded square */}
@@ -37,13 +40,19 @@ export default function AccountBanner({ account, onPress }: Props) {
         {/* Balance col */}
         <View style={styles.balanceCol}>
           <View style={styles.primaryRow}>
-            <Text style={[styles.primaryLabel, { color: colors.textMuted }]}>PRIMARY</Text>
+            <Text style={[styles.primaryLabel, { color: colors.textMuted }]}>
+              PRIMARY
+            </Text>
             <View style={[styles.dot, { backgroundColor: accentColor }]} />
           </View>
           <Text
             style={[
               styles.balance,
-              { color: colors.text, fontSize: typography.size["2xl"], fontWeight: typography.weight.semibold },
+              {
+                color: colors.text,
+                fontSize: typography.size["24"],
+                fontWeight: typography.weight.semibold,
+              },
             ]}
           >
             {formatCurrency(account.balance)}
@@ -53,13 +62,22 @@ export default function AccountBanner({ account, onPress }: Props) {
         {/* Account name + last four */}
         <View style={styles.accountInfo}>
           <Text
-            style={[styles.accountName, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.medium }]}
+            style={[
+              styles.accountName,
+              {
+                color: colors.text,
+                fontSize: typography.size.sm,
+                fontWeight: typography.weight.medium,
+              },
+            ]}
             numberOfLines={1}
           >
             {account.name}
           </Text>
           <Text style={[styles.accountSub, { color: colors.textMuted }]}>
-            {account.lastFourDigits ? `•• ${account.lastFourDigits}` : account.type}
+            {account.lastFourDigits
+              ? `•• ${account.lastFourDigits}`
+              : account.type}
           </Text>
         </View>
       </View>

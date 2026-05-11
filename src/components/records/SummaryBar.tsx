@@ -13,12 +13,12 @@ const SummaryBar = memo(function SummaryBar({ income, expense }: Props) {
   const net = income - expense;
 
   const items = [
-    { label: "INCOME",  value: income,  color: colors.primary,     sign: "" },
-    { label: "EXPENSE", value: expense, color: colors.textSecondary, sign: "" },
+    { label: "INCOME", value: income, color: colors.income, sign: "" },
+    { label: "EXPENSE", value: expense, color: colors.expenseAccent, sign: "" },
     {
       label: "NET",
       value: Math.abs(net),
-      color: net >= 0 ? colors.primary : colors.expenseAccent,
+      color: colors.textSecondary,
       sign: net >= 0 ? "+" : "−",
     },
   ];
@@ -28,13 +28,18 @@ const SummaryBar = memo(function SummaryBar({ income, expense }: Props) {
       {items.map((item, i) => (
         <React.Fragment key={item.label}>
           <View style={styles.item}>
-            <Text style={[styles.label, { color: colors.textMuted }]}>{item.label}</Text>
+            <Text style={[styles.label, { color: colors.textMuted }]}>
+              {item.label}
+            </Text>
             <Text style={[styles.value, { color: item.color }]}>
-              {item.sign}{formatCurrency(item.value, { compact: true })}
+              {item.sign}
+              {formatCurrency(item.value, { compact: true })}
             </Text>
           </View>
           {i < items.length - 1 && (
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
           )}
         </React.Fragment>
       ))}
@@ -50,9 +55,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 8,
+    marginBottom: 10,
   },
   item: { flex: 1, alignItems: "center", gap: 3 },
   label: { fontSize: 10, fontWeight: "600", letterSpacing: 0.8 },
-  value: { fontSize: 14, fontWeight: "600", letterSpacing: -0.2, fontVariant: ["tabular-nums"] },
+  value: {
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
+  },
   divider: { width: StyleSheet.hairlineWidth, height: 28, marginHorizontal: 4 },
 });
