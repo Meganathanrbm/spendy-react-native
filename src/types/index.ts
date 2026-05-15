@@ -85,13 +85,10 @@ export type AssetType =
   | "real_estate"
   | "other";
 
-export type AssetSubType = "equity" | "debt" | "gold" | "hybrid" | "real_estate" | "other";
-
 export type Asset = {
   id: string;
   name: string;
   type: AssetType;
-  subType: AssetSubType;
   investedAmount: number;
   currentValue: number;
   units?: number;           // for MF / stocks

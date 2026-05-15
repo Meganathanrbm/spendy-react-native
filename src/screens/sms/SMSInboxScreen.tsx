@@ -9,20 +9,19 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import {
-  ArrowDown,
-  ArrowUp,
-  CircleCheck,
-  CreditCard,
-  Info,
   X,
   Check,
-  ArrowLeft,
   CheckCheck,
   Mail,
   RefreshCw,
+  Pencil,
+  ChevronRight,
+  Tag,
 } from "lucide-react-native";
+import { getCategoryIcon, getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import uuid from "react-native-uuid";
@@ -38,8 +37,17 @@ import {
   requestSMSPermission,
 } from "../../lib/helpers/smsService";
 import { formatCurrency } from "../../lib/helpers/currency";
-import { SMSDraft, Account } from "../../types";
-import { TouchableOpacity } from "react-native";
+import { SMSDraft, Account, TransactionType } from "../../types";
+import CategoryPicker from "../../components/transaction/CategoryPicker";
+import BottomSheet from "../../components/common/BottomSheet";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type DraftWithEdits = SMSDraft & {
+  editType: TransactionType;
+  editCategory: string;
+  editAccountId: string;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,91 +65,167 @@ function matchAccount(
   );
 }
 
-// ─── Draft card ───────────────────────────────────────────────────────────────
+function initDraft(draft: SMSDraft, accounts: Account[]): DraftWithEdits {
+  const matched = matchAccount(draft, accounts);
+  const primary = accounts.find((a) => a.isPrimary) ?? accounts[0];
+  const account = matched ?? primary;
+  return {
+    ...draft,
+    editType: draft.parsedType,
+    editCategory: draft.suggestedCategory ?? "Other",
+    editAccountId: account?.id ?? "",
+  };
+}
+
+function formatCardTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+const TYPE_CONFIG: Record<TransactionType, { label: string; dotColor: string }> =
+  {
+    income: { label: "INCOME", dotColor: "#34D399" },
+    expense: { label: "EXPENSE", dotColor: "#F59E0B" },
+    transfer: { label: "TRANSFER", dotColor: "#60A5FA" },
+  };
+
+// ─── Draft Card ───────────────────────────────────────────────────────────────
 
 type DraftCardProps = {
-  draft: SMSDraft;
-  matchedAccount?: Account;
-  onAccept: () => void;
-  onDismiss: () => void;
+  draft: DraftWithEdits;
+  isEditing: boolean;
+  tab: "pending" | "accepted" | "dismissed";
+  accounts: Account[];
   colors: any;
   typography: any;
+  onEdit: () => void;
+  onDone: () => void;
+  onAccept: () => void;
+  onDismiss: () => void;
+  onRestore: () => void;
+  onTypeChange: (type: TransactionType) => void;
+  onCategoryChange: (category: string) => void;
+  onAccountChange: (accountId: string) => void;
 };
 
 const DraftCard = ({
   draft,
-  matchedAccount,
-  onAccept,
-  onDismiss,
+  isEditing,
+  tab,
+  accounts,
   colors,
   typography,
+  onEdit,
+  onDone,
+  onAccept,
+  onDismiss,
+  onRestore,
+  onTypeChange,
+  onCategoryChange,
+  onAccountChange,
 }: DraftCardProps) => {
-  const isCredit = draft.parsedType === "income";
-  const amountColor = isCredit ? colors.income : colors.expense;
-  const accentBg = isCredit ? colors.incomeLight : colors.expenseLight;
-  const category = draft.suggestedCategory ?? "Others";
-  const icon = draft.suggestedIcon ?? (isCredit ? "💰" : "💸");
+  const [accountPickerOpen, setAccountPickerOpen] = useState(false);
+
+  const typeConfig = TYPE_CONFIG[draft.editType] ?? TYPE_CONFIG.expense;
+  const isIncome = draft.editType === "income";
+  const isTransfer = draft.editType === "transfer";
+  const isDismissed = tab === "dismissed";
+  const isAccepted = tab === "accepted";
+
   const merchant =
     draft.parsedMerchant ??
-    `${draft.parsedBank} ${isCredit ? "Credit" : "Debit"}`;
+    `${draft.parsedBank} ${draft.parsedType === "income" ? "Credit" : "Debit"}`;
 
-  const dateStr = new Date(draft.parsedDate).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-  });
+  const CategoryIcon = isDismissed ? Tag : getCategoryIcon(draft.editCategory);
+
+  const iconBg = isDismissed
+    ? colors.surfaceAlt
+    : isIncome
+      ? colors.incomeLight
+      : isTransfer
+        ? colors.transferLight
+        : colors.expenseLight;
+
+  const iconColor = isDismissed
+    ? colors.textMuted
+    : isIncome
+      ? colors.income
+      : isTransfer
+        ? colors.transfer
+        : colors.textSecondary;
+
+  const amountColor = isIncome
+    ? colors.income
+    : isTransfer
+      ? colors.transfer
+      : colors.text;
+
+  const amountPrefix = isIncome ? "+" : isTransfer ? "" : "−";
+
+  const displayAccount =
+    accounts.find((a) => a.id === draft.editAccountId) ??
+    accounts.find((a) => a.isPrimary) ??
+    accounts[0];
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      {/* ── Top strip: bank + type indicator ── */}
-      <View style={[styles.topStrip, { backgroundColor: accentBg }]}>
-        <View style={styles.topLeft}>
-          <View style={[styles.typeIcon, { backgroundColor: amountColor }]}>
-            {isCredit ? (
-              <ArrowDown size={10} color="#fff" strokeWidth={2} />
-            ) : (
-              <ArrowUp size={10} color="#fff" strokeWidth={2} />
-            )}
+      {/* Row 1: Bank badge + last4 + time */}
+      <View style={styles.cardTopRow}>
+        <View style={styles.bankBadgeRow}>
+          <View
+            style={[
+              styles.bankBadge,
+              { backgroundColor: colors.surfaceElevated },
+            ]}
+          >
+            <Text
+              style={[
+                styles.bankBadgeText,
+                {
+                  color: colors.textSecondary,
+                  fontSize: typography.size.xs,
+                },
+              ]}
+            >
+              SMS · {draft.parsedBank}
+            </Text>
           </View>
-          <Text
-            style={[
-              styles.bankName,
-              { color: amountColor, fontSize: typography.size.xs },
-            ]}
-          >
-            {draft.parsedBank}
-          </Text>
-          <Text
-            style={[
-              styles.typePill,
-              { color: amountColor, fontSize: typography.size.xs },
-            ]}
-          >
-            {isCredit ? "CREDIT" : "DEBIT"}
-          </Text>
+          {draft.parsedLastFour && (
+            <Text
+              style={[
+                styles.lastFour,
+                { color: colors.textMuted, fontSize: typography.size.xs },
+              ]}
+            >
+              ·· {draft.parsedLastFour}
+            </Text>
+          )}
         </View>
         <Text
           style={[
-            styles.dateLabel,
+            styles.cardTime,
             { color: colors.textMuted, fontSize: typography.size.xs },
           ]}
         >
-          {dateStr}
+          {formatCardTime(draft.parsedDate)}
         </Text>
       </View>
 
-      {/* ── Body ── */}
-      <View style={styles.body}>
-        {/* Merchant row */}
-        <View style={styles.merchantRow}>
-          <View style={[styles.iconCircle, { backgroundColor: accentBg }]}>
-            <Text style={styles.iconEmoji}>{icon}</Text>
-          </View>
-          <View style={styles.merchantInfo}>
+      {/* Merchant row */}
+      <View style={styles.cardBody}>
+        <View style={[styles.categoryIconBox, { backgroundColor: iconBg }]}>
+          <CategoryIcon size={20} color={iconColor} strokeWidth={1.7} />
+        </View>
+        <View style={styles.merchantCol}>
+          <View style={styles.merchantAmountRow}>
             <Text
               style={[
                 styles.merchantName,
                 {
-                  color: colors.text,
+                  color: isDismissed ? colors.textMuted : colors.text,
                   fontSize: typography.size.base,
                   fontWeight: typography.weight.semibold,
                 },
@@ -152,113 +236,366 @@ const DraftCard = ({
             </Text>
             <Text
               style={[
-                styles.categoryLabel,
+                styles.amount,
+                {
+                  color: isDismissed ? colors.textMuted : amountColor,
+                  fontSize: typography.size.lg,
+                  fontWeight: typography.weight.bold,
+                  letterSpacing: -0.2,
+                },
+              ]}
+            >
+              {isDismissed ? "" : amountPrefix}
+              {formatCurrency(draft.parsedAmount)}
+            </Text>
+          </View>
+          <View style={styles.typeCategoryRow}>
+            <View style={styles.typeBadge}>
+              <View
+                style={[
+                  styles.typeDot,
+                  {
+                    backgroundColor: isDismissed
+                      ? colors.textMuted
+                      : typeConfig.dotColor,
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.typeBadgeText,
+                  {
+                    color: isDismissed
+                      ? colors.textMuted
+                      : typeConfig.dotColor,
+                    fontSize: typography.size.xs,
+                  },
+                ]}
+              >
+                {typeConfig.label}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.categoryAccountText,
+                { color: colors.textMuted, fontSize: typography.size.xs },
+              ]}
+              numberOfLines={1}
+            >
+              {isDismissed
+                ? "Uncategorized"
+                : `${draft.editCategory} · ${displayAccount?.name ?? "No account"}`}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* SMS preview */}
+      <Text
+        style={[
+          styles.smsPreview,
+          {
+            color: colors.textMuted,
+            fontSize: typography.size.xs,
+            borderTopColor: colors.border,
+          },
+        ]}
+        numberOfLines={2}
+      >
+        {draft.rawSms}
+      </Text>
+
+      {/* Edit section */}
+      {isEditing && (
+        <View
+          style={[styles.editSection, { borderTopColor: colors.border }]}
+        >
+          {/* TYPE */}
+          <Text
+            style={[
+              styles.editLabel,
+              { color: colors.textMuted, fontSize: typography.size.xs },
+            ]}
+          >
+            TYPE
+          </Text>
+          <View style={styles.typeButtons}>
+            {(["income", "expense", "transfer"] as TransactionType[]).map(
+              (t) => {
+                const cfg = TYPE_CONFIG[t];
+                const active = draft.editType === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => onTypeChange(t)}
+                    style={[
+                      styles.typeBtn,
+                      {
+                        borderColor: active
+                          ? colors.borderStrong
+                          : colors.border,
+                        backgroundColor: active
+                          ? colors.surfaceAlt
+                          : "transparent",
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    {active && (
+                      <View
+                        style={[
+                          styles.typeDotSm,
+                          { backgroundColor: cfg.dotColor },
+                        ]}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.typeBtnText,
+                        {
+                          color: active ? colors.text : colors.textMuted,
+                          fontSize: typography.size.xs,
+                        },
+                      ]}
+                    >
+                      {cfg.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              },
+            )}
+          </View>
+
+          {/* CATEGORY */}
+          <CategoryPicker
+            transactionType={draft.editType}
+            selectedName={draft.editCategory}
+            onSelect={(cat) => onCategoryChange(cat.name)}
+          />
+
+          {/* ACCOUNT */}
+          <TouchableOpacity
+            onPress={() => setAccountPickerOpen(true)}
+            style={[
+              styles.accountTrigger,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
+            activeOpacity={0.75}
+          >
+            <Text
+              style={[
+                styles.editLabel,
                 { color: colors.textMuted, fontSize: typography.size.xs },
               ]}
             >
-              {category}
+              ACCOUNT
             </Text>
-          </View>
-          <Text
-            style={[
-              styles.amount,
-              {
-                color: amountColor,
-                fontSize: typography.size.xl,
-                fontWeight: typography.weight.bold,
-              },
-            ]}
-          >
-            {isCredit ? "+" : "−"}
-            {formatCurrency(draft.parsedAmount)}
-          </Text>
-        </View>
-
-        {/* Account chip row */}
-        <View style={styles.chipRow}>
-          {matchedAccount ? (
-            <View
-              style={[styles.chip, { backgroundColor: colors.primaryMuted }]}
-            >
-              <CircleCheck size={11} color={colors.primary} strokeWidth={2} />
-              <Text style={[styles.chipText, { color: colors.primary }]}>
-                {matchedAccount.name}
+            <View style={styles.accountTriggerValue}>
+              <View
+                style={[
+                  styles.accountEmojiBox,
+                  { backgroundColor: displayAccount ? displayAccount.color + "22" : colors.surfaceAlt },
+                ]}
+              >
+                {(() => { const Icon = getAccountTypeIcon(displayAccount?.type ?? "savings"); return <Icon size={16} color={displayAccount?.color ?? colors.textMuted} strokeWidth={1.7} />; })()}
+              </View>
+              <Text
+                style={[
+                  styles.accountTriggerName,
+                  {
+                    color: colors.text,
+                    fontSize: typography.size.base,
+                    fontWeight: typography.weight.medium,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {displayAccount?.name ?? "No account"}
               </Text>
-            </View>
-          ) : draft.parsedLastFour ? (
-            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-              <CreditCard
-                size={11}
+              <ChevronRight
+                size={14}
                 color={colors.textMuted}
                 strokeWidth={1.7}
               />
-              <Text style={[styles.chipText, { color: colors.textMuted }]}>
-                ••••{draft.parsedLastFour}
-              </Text>
             </View>
-          ) : (
-            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-              <Info size={11} color={colors.textMuted} strokeWidth={1.7} />
-              <Text style={[styles.chipText, { color: colors.textMuted }]}>
-                No account matched
-              </Text>
-            </View>
-          )}
+          </TouchableOpacity>
+
+          <BottomSheet
+            visible={accountPickerOpen}
+            onClose={() => setAccountPickerOpen(false)}
+            maxHeight={0.5}
+          >
+            <Text
+              style={[
+                styles.sheetTitle,
+                {
+                  color: colors.text,
+                  fontSize: typography.size.lg,
+                  fontWeight: typography.weight.bold,
+                },
+              ]}
+            >
+              Select account
+            </Text>
+            {accounts.map((acc) => {
+              const selected = draft.editAccountId === acc.id;
+              return (
+                <TouchableOpacity
+                  key={acc.id}
+                  onPress={() => {
+                    onAccountChange(acc.id);
+                    setAccountPickerOpen(false);
+                  }}
+                  style={[
+                    styles.accountSheetRow,
+                    {
+                      backgroundColor: selected
+                        ? colors.primaryMuted
+                        : "transparent",
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.accountEmojiBox,
+                      { backgroundColor: acc.color + "22" },
+                    ]}
+                  >
+                    {(() => { const Icon = getAccountTypeIcon(acc.type); return <Icon size={18} color={acc.color} strokeWidth={1.7} />; })()}
+                  </View>
+                  <Text
+                    style={[
+                      styles.accountSheetName,
+                      {
+                        flex: 1,
+                        color: selected ? colors.primary : colors.text,
+                        fontSize: typography.size.base,
+                      },
+                    ]}
+                  >
+                    {acc.name}
+                  </Text>
+                  {selected && (
+                    <Check size={14} color={colors.primary} strokeWidth={2} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </BottomSheet>
         </View>
+      )}
 
-        {/* SMS preview */}
-        <Text
-          style={[
-            styles.smsText,
-            {
-              color: colors.textMuted,
-              borderTopColor: colors.divider,
-              fontSize: typography.size.xs,
-            },
-          ]}
-          numberOfLines={2}
-        >
-          {draft.rawSms}
-        </Text>
-      </View>
+      {/* Actions — pending */}
+      {tab === "pending" && (
+        <View style={[styles.actions, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            onPress={isEditing ? onDone : onEdit}
+            style={[styles.actionOutline, { borderColor: colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Pencil size={12} color={colors.textSecondary} strokeWidth={1.7} />
+            <Text
+              style={[
+                styles.actionText,
+                {
+                  color: colors.textSecondary,
+                  fontSize: typography.size.sm,
+                },
+              ]}
+            >
+              {isEditing ? "Done" : "Edit"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={[styles.actionOutline, { borderColor: colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.actionText,
+                {
+                  color: colors.textSecondary,
+                  fontSize: typography.size.sm,
+                },
+              ]}
+            >
+              Dismiss
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onAccept}
+            style={[
+              styles.actionFilled,
+              { backgroundColor: colors.primary },
+            ]}
+            activeOpacity={0.8}
+          >
+            <Check size={13} color="#000" strokeWidth={2.5} />
+            <Text
+              style={[
+                styles.actionText,
+                {
+                  color: "#000",
+                  fontSize: typography.size.sm,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              Accept
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* ── Actions ── */}
-      <View style={[styles.actions, { borderTopColor: colors.divider }]}>
-        <TouchableOpacity
-          onPress={onDismiss}
-          style={[styles.actionBtn, { borderColor: colors.border }]}
+      {/* Footer — accepted */}
+      {isAccepted && (
+        <View style={[styles.acceptedFooter, { borderTopColor: colors.border }]}>
+          <Check size={13} color={colors.income} strokeWidth={2} />
+          <Text
+            style={[
+              styles.acceptedText,
+              { color: colors.income, fontSize: typography.size.sm },
+            ]}
+          >
+            Added to records
+          </Text>
+        </View>
+      )}
+
+      {/* Footer — dismissed */}
+      {isDismissed && (
+        <View
+          style={[styles.dismissedFooter, { borderTopColor: colors.border }]}
         >
           <Text
             style={[
-              styles.actionLabel,
+              styles.dismissedLabel,
               { color: colors.textMuted, fontSize: typography.size.sm },
             ]}
           >
-            Dismiss
+            Dismissed
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onAccept}
-          style={[
-            styles.actionBtn,
-            { backgroundColor: colors.primary, borderColor: colors.primary },
-          ]}
-        >
-          <Check size={16} color="#000" strokeWidth={2} />
-          <Text
-            style={[
-              styles.actionLabel,
-              {
-                color: "#000",
-                fontSize: typography.size.sm,
-                fontWeight: typography.weight.semibold,
-              },
-            ]}
-          >
-           Accept
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity onPress={onRestore} activeOpacity={0.7}>
+            <Text
+              style={[
+                styles.restoreText,
+                {
+                  color: colors.textSecondary,
+                  fontSize: typography.size.sm,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              Restore
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -273,9 +610,10 @@ export default function SMSInboxScreen() {
   const { data: existingTransactions = [] } = useTransactionsByPeriod();
   const saveTransaction = useSaveTransaction();
 
-  const [drafts, setDrafts] = useState<SMSDraft[]>([]);
-  const [accepted, setAccepted] = useState<SMSDraft[]>([]);
-  const [dismissed, setDismissed] = useState<SMSDraft[]>([]);
+  const [drafts, setDrafts] = useState<DraftWithEdits[]>([]);
+  const [accepted, setAccepted] = useState<DraftWithEdits[]>([]);
+  const [dismissed, setDismissed] = useState<DraftWithEdits[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState<"pending" | "accepted" | "dismissed">(
     "pending",
   );
@@ -304,7 +642,7 @@ export default function SMSInboxScreen() {
           existingTransactions,
           accounts,
         );
-        setDrafts(results);
+        setDrafts(results.map((d) => initDraft(d, accounts)));
         if (results.length === 0)
           setError("No bank SMS found in the last 30 days.");
       } catch (e: any) {
@@ -314,7 +652,7 @@ export default function SMSInboxScreen() {
         setRefreshing(false);
       }
     },
-    [existingTransactions],
+    [existingTransactions, accounts],
   );
 
   useEffect(() => {
@@ -322,11 +660,21 @@ export default function SMSInboxScreen() {
     else setError("SMS reading is only available on Android devices.");
   }, [loadTransactions]);
 
+  const updateDraft = useCallback(
+    (id: string, updates: Partial<DraftWithEdits>) => {
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+      );
+    },
+    [],
+  );
+
   const handleAccept = useCallback(
-    async (draft: SMSDraft) => {
-      const matched = matchAccount(draft, accounts);
-      const primary = accounts.find((a) => a.isPrimary) ?? accounts[0];
-      const account = matched ?? primary;
+    async (draft: DraftWithEdits) => {
+      const account =
+        accounts.find((a) => a.id === draft.editAccountId) ??
+        accounts.find((a) => a.isPrimary) ??
+        accounts[0];
 
       if (!account) {
         Alert.alert(
@@ -342,42 +690,50 @@ export default function SMSInboxScreen() {
             draft.parsedMerchant ??
             `${draft.parsedBank} ${draft.parsedType === "income" ? "Credit" : "Debit"}`,
           amount: draft.parsedAmount,
-          type: draft.parsedType,
-          category: draft.suggestedCategory ?? "Others",
+          type: draft.editType,
+          category: draft.editCategory,
           date: draft.parsedDate,
-          icon:
-            draft.suggestedIcon ??
-            (draft.parsedType === "income" ? "💰" : "💸"),
+          icon: draft.suggestedIcon ?? "Package",
           accountId: account.id,
           isAutoDetected: true,
           smsSource: draft.parsedBank,
         });
         setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
         setAccepted((prev) => [...prev, draft]);
+        if (editingId === draft.id) setEditingId(null);
       } catch {
         Alert.alert("Error", "Failed to save transaction.");
       }
     },
-    [accounts, saveTransaction],
+    [accounts, saveTransaction, editingId],
   );
 
   const handleDismiss = useCallback(
     (id: string) => {
       const draft = drafts.find((d) => d.id === id);
-      setDrafts((p) => p.filter((d) => d.id !== id));
+      setDrafts((prev) => prev.filter((d) => d.id !== id));
       if (draft) setDismissed((prev) => [...prev, draft]);
+      if (editingId === id) setEditingId(null);
     },
-    [drafts],
+    [drafts, editingId],
   );
+
+  const handleRestore = useCallback((id: string) => {
+    setDismissed((prev) => {
+      const draft = prev.find((d) => d.id === id);
+      if (draft) setDrafts((existing) => [draft, ...existing]);
+      return prev.filter((d) => d.id !== id);
+    });
+  }, []);
+
   const handleAcceptAll = useCallback(() => {
     if (!drafts.length) return;
-    Alert.alert("Add All", `Add all ${drafts.length} detected transactions?`, [
+    Alert.alert("Accept All", `Add all ${drafts.length} detected transactions?`, [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Add All",
+        text: "Accept All",
         onPress: async () => {
-          const toProcess = [...drafts];
-          for (const draft of toProcess) {
+          for (const draft of [...drafts]) {
             await handleAccept(draft);
           }
         },
@@ -387,14 +743,19 @@ export default function SMSInboxScreen() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
+  const listData =
+    tab === "pending" ? drafts : tab === "accepted" ? accepted : dismissed;
+
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* ── Header ── */}
+    <View
+      style={[styles.root, { backgroundColor: colors.background }]}
+    >
+      {/* Header */}
       <View
         style={[
           styles.header,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             borderBottomColor: colors.border,
             paddingTop: insets.top + 8,
           },
@@ -403,13 +764,12 @@ export default function SMSInboxScreen() {
         <Pressable
           onPress={() => navigation.goBack()}
           style={({ pressed }) => [
-            styles.iconBtn,
+            styles.headerIconBtn,
             { opacity: pressed ? 0.6 : 1 },
           ]}
         >
-          <ArrowLeft size={22} color={colors.text} strokeWidth={1.7} />
+          <X size={20} color={colors.text} strokeWidth={1.8} />
         </Pressable>
-
         <Text
           style={[
             styles.headerTitle,
@@ -420,37 +780,13 @@ export default function SMSInboxScreen() {
             },
           ]}
         >
-          SMS Transactions
+          SMS inbox
         </Text>
-
-        {drafts.length > 0 ? (
-          <Pressable
-            onPress={handleAcceptAll}
-            style={({ pressed }) => [
-              styles.addAllBtn,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-          >
-            <Text
-              style={[
-                styles.addAllLabel,
-                {
-                  color: colors.primary,
-                  fontSize: typography.size.sm,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              Add All
-            </Text>
-          </Pressable>
-        ) : (
-          <View style={styles.iconBtn} />
-        )}
+        <View style={styles.headerIconBtn} />
       </View>
 
-      {/* ── Tabs ── */}
-      <View style={[styles.tabsRow, { borderBottomColor: colors.border }]}>
+      {/* Tabs */}
+      <View style={[styles.tabsRow, { backgroundColor: colors.background }]}>
         {(["pending", "accepted", "dismissed"] as const).map((t) => {
           const count =
             t === "pending"
@@ -458,58 +794,74 @@ export default function SMSInboxScreen() {
               : t === "accepted"
                 ? accepted.length
                 : dismissed.length;
+          const active = tab === t;
           return (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
               style={[
-                styles.tabBtn,
-                tab === t && {
-                  borderBottomColor: colors.primary,
-                  borderBottomWidth: 2,
+                styles.tabPill,
+                active && {
+                  backgroundColor: colors.surfaceElevated,
                 },
               ]}
               activeOpacity={0.7}
             >
               <Text
                 style={[
-                  styles.tabBtnText,
-                  { color: tab === t ? colors.text : colors.textMuted },
+                  styles.tabPillText,
+                  {
+                    color: active ? colors.text : colors.textMuted,
+                    fontSize: typography.size.sm,
+                    fontWeight: active
+                      ? typography.weight.semibold
+                      : typography.weight.regular,
+                  },
                 ]}
               >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
+                {count > 0 ? ` · ${count}` : ""}
               </Text>
-              {count > 0 && (
-                <View
-                  style={[
-                    styles.tabBadge,
-                    {
-                      backgroundColor:
-                        t === "pending"
-                          ? colors.primaryMuted
-                          : colors.surfaceAlt,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      {
-                        color:
-                          t === "pending" ? colors.primary : colors.textMuted,
-                      },
-                    ]}
-                  >
-                    {count}
-                  </Text>
-                </View>
-              )}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* ── Loading ── */}
+      {/* Auto-detect banner */}
+      {tab === "pending" && drafts.length > 0 && (
+        <View
+          style={[styles.banner, { borderBottomColor: colors.border }]}
+        >
+          <Text
+            style={[
+              styles.bannerText,
+              { color: colors.textMuted, fontSize: typography.size.xs },
+            ]}
+          >
+            {drafts.length} draft{drafts.length !== 1 ? "s" : ""}{" "}
+            auto-detected · tap Edit to adjust
+          </Text>
+          <Pressable
+            onPress={handleAcceptAll}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text
+              style={[
+                styles.acceptAllText,
+                {
+                  color: colors.primary,
+                  fontSize: typography.size.xs,
+                  fontWeight: typography.weight.semibold,
+                },
+              ]}
+            >
+              Accept all
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Loading */}
       {loading && (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -524,11 +876,14 @@ export default function SMSInboxScreen() {
         </View>
       )}
 
-      {/* ── Error ── */}
+      {/* Error */}
       {!loading && error && (
         <View style={styles.center}>
           <View
-            style={[styles.stateIcon, { backgroundColor: colors.surfaceAlt }]}
+            style={[
+              styles.stateIconBox,
+              { backgroundColor: colors.surfaceAlt },
+            ]}
           >
             <Mail size={32} color={colors.textMuted} strokeWidth={1.5} />
           </View>
@@ -542,9 +897,7 @@ export default function SMSInboxScreen() {
               },
             ]}
           >
-            {Platform.OS !== "android"
-              ? "Android Only"
-              : "Something went wrong"}
+            {Platform.OS !== "android" ? "Android Only" : "Something went wrong"}
           </Text>
           <Text
             style={[
@@ -562,12 +915,12 @@ export default function SMSInboxScreen() {
                 { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
               ]}
             >
-              <RefreshCw size={16} color="#fff" strokeWidth={1.7} />
+              <RefreshCw size={15} color="#000" strokeWidth={1.8} />
               <Text
                 style={[
-                  styles.btnLabel,
+                  styles.retryText,
                   {
-                    color: "#fff",
+                    color: "#000",
                     fontSize: typography.size.sm,
                     fontWeight: typography.weight.semibold,
                   },
@@ -580,122 +933,110 @@ export default function SMSInboxScreen() {
         </View>
       )}
 
-      {/* ── Empty state ── */}
-      {!loading &&
-        !error &&
-        tab === "pending" &&
-        drafts.length === 0 &&
-        hasPermission && (
-          <View style={styles.center}>
-            <View
-              style={[
-                styles.stateIcon,
-                { backgroundColor: colors.incomeLight },
-              ]}
-            >
-              <CheckCheck size={32} color={colors.income} strokeWidth={1.5} />
-            </View>
-            <Text
-              style={[
-                styles.stateTitle,
-                {
-                  color: colors.text,
-                  fontSize: typography.size.base,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              All caught up!
-            </Text>
-            <Text
-              style={[
-                styles.stateLabel,
-                { color: colors.textMuted, fontSize: typography.size.sm },
-              ]}
-            >
-              No pending bank SMS transactions.
-            </Text>
+      {/* Empty state */}
+      {!loading && !error && tab === "pending" && drafts.length === 0 && hasPermission && (
+        <View style={styles.center}>
+          <View
+            style={[styles.stateIconBox, { backgroundColor: colors.incomeLight }]}
+          >
+            <CheckCheck size={32} color={colors.income} strokeWidth={1.5} />
           </View>
-        )}
+          <Text
+            style={[
+              styles.stateTitle,
+              {
+                color: colors.text,
+                fontSize: typography.size.base,
+                fontWeight: typography.weight.semibold,
+              },
+            ]}
+          >
+            All caught up!
+          </Text>
+          <Text
+            style={[
+              styles.stateLabel,
+              { color: colors.textMuted, fontSize: typography.size.sm },
+            ]}
+          >
+            No pending bank SMS transactions.
+          </Text>
+        </View>
+      )}
 
-      {!loading &&
-        !error &&
-        tab !== "pending" &&
-        (tab === "accepted" ? accepted : dismissed).length === 0 && (
-          <View style={styles.center}>
-            <Text
-              style={[
-                styles.stateTitle,
-                {
-                  color: colors.text,
-                  fontSize: typography.size.base,
-                  fontWeight: typography.weight.semibold,
-                },
-              ]}
-            >
-              Nothing here
-            </Text>
-            <Text
-              style={[
-                styles.stateLabel,
-                { color: colors.textMuted, fontSize: typography.size.sm },
-              ]}
-            >
-              No {tab} transactions yet.
-            </Text>
-          </View>
-        )}
+      {!loading && !error && tab !== "pending" && listData.length === 0 && (
+        <View style={styles.center}>
+          <Text
+            style={[
+              styles.stateTitle,
+              {
+                color: colors.text,
+                fontSize: typography.size.base,
+                fontWeight: typography.weight.semibold,
+              },
+            ]}
+          >
+            Nothing here
+          </Text>
+          <Text
+            style={[
+              styles.stateLabel,
+              { color: colors.textMuted, fontSize: typography.size.sm },
+            ]}
+          >
+            No {tab} transactions yet.
+          </Text>
+        </View>
+      )}
 
-      {/* ── List ── */}
-      {!loading &&
-        (() => {
-          const listData =
-            tab === "pending"
-              ? drafts
-              : tab === "accepted"
-                ? accepted
-                : dismissed;
-          if (listData.length === 0) return null;
-          return (
-            <FlatList
-              data={listData}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={{
-                paddingHorizontal: 14,
-                paddingTop: 12,
-                paddingBottom: insets.bottom + 28,
-              }}
-              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-              removeClippedSubviews
-              maxToRenderPerBatch={8}
-              windowSize={10}
-              refreshControl={
-                tab === "pending" ? (
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={() => loadTransactions(true)}
-                    tintColor={colors.primary}
-                    colors={[colors.primary]}
-                  />
-                ) : undefined
+      {/* List */}
+      {!loading && listData.length > 0 && (
+        <FlatList
+          data={listData}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 14,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 28,
+          }}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          removeClippedSubviews
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          refreshControl={
+            tab === "pending" ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => loadTransactions(true)}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            ) : undefined
+          }
+          renderItem={({ item }) => (
+            <DraftCard
+              draft={item}
+              isEditing={editingId === item.id}
+              tab={tab}
+              accounts={accounts}
+              colors={colors}
+              typography={typography}
+              onEdit={() => setEditingId(item.id)}
+              onDone={() => setEditingId(null)}
+              onAccept={() => handleAccept(item)}
+              onDismiss={() => handleDismiss(item.id)}
+              onRestore={() => handleRestore(item.id)}
+              onTypeChange={(type) => updateDraft(item.id, { editType: type })}
+              onCategoryChange={(category) =>
+                updateDraft(item.id, { editCategory: category })
               }
-              renderItem={({ item }) => (
-                <DraftCard
-                  draft={item}
-                  matchedAccount={matchAccount(item, accounts)}
-                  onAccept={
-                    tab === "pending" ? () => handleAccept(item) : () => {}
-                  }
-                  onDismiss={
-                    tab === "pending" ? () => handleDismiss(item.id) : () => {}
-                  }
-                  colors={colors}
-                  typography={typography}
-                />
-              )}
+              onAccountChange={(accountId) =>
+                updateDraft(item.id, { editAccountId: accountId })
+              }
             />
-          );
-        })()}
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -713,48 +1054,42 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  iconBtn: {
+  headerIconBtn: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { flex: 1, textAlign: "center" },
-  addAllBtn: {
-    width: 64,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
   },
-  addAllLabel: {},
 
   // Tabs
   tabsRow: {
     flexDirection: "row",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
+    paddingHorizontal: 12,
     paddingVertical: 10,
+    gap: 8,
   },
-  tabBtnText: { fontSize: 12.5, fontWeight: "600" },
-  tabBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
-  tabBadgeText: { fontSize: 10, fontWeight: "600" },
+  tabPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  tabPillText: {},
 
   // Banner
   banner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 14,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
     paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  bannerText: { fontWeight: "500" },
+  bannerText: {},
+  acceptAllText: {},
 
   // States
   center: {
@@ -764,7 +1099,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     gap: 10,
   },
-  stateIcon: {
+  stateIconBox: {
     width: 72,
     height: 72,
     borderRadius: 36,
@@ -778,110 +1113,164 @@ const styles = StyleSheet.create({
     marginTop: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 24,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: 12,
   },
+  retryText: {},
 
   // Card
   card: {
     borderRadius: 16,
     overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
-      },
-      android: { elevation: 3 },
-    }),
   },
-  topStrip: {
+
+  // Card top row
+  cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 6,
   },
-  topLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
-  typeIcon: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  bankBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  bankBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  bankBadgeText: { fontWeight: "600", letterSpacing: 0.2 },
+  lastFour: {},
+  cardTime: {},
+
+  // Card body
+  cardBody: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    gap: 12,
+  },
+  categoryIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 2,
   },
-  bankName: { fontWeight: "600", letterSpacing: 0.2 },
-  typePill: { fontWeight: "700", letterSpacing: 0.6, opacity: 0.7 },
-  dateLabel: { fontWeight: "400" },
-
-  body: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4, gap: 10 },
-
-  merchantRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  iconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconEmoji: { fontSize: 20 },
-  merchantInfo: { flex: 1, minWidth: 0 },
-  merchantName: { lineHeight: 20 },
-  categoryLabel: { marginTop: 1 },
-  amount: { flexShrink: 0, marginLeft: 8 },
-
-  chipRow: { flexDirection: "row", alignItems: "center" },
-  chip: {
+  merchantCol: { flex: 1, minWidth: 0 },
+  merchantAmountRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+    justifyContent: "space-between",
+    gap: 8,
   },
-  chipText: { fontSize: 11, fontWeight: "500" },
+  merchantName: { flex: 1, lineHeight: 20 },
+  amount: { flexShrink: 0 },
+  typeCategoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 3,
+    flexWrap: "wrap",
+  },
+  typeBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
+  typeDot: { width: 6, height: 6, borderRadius: 3 },
+  typeBadgeText: { fontWeight: "700", letterSpacing: 0.3 },
+  categoryAccountText: {},
 
-  smsText: {
+  // SMS preview
+  smsPreview: {
+    marginHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    paddingBottom: 4,
     lineHeight: 17,
     fontStyle: "italic",
   },
+
+  // Edit section
+  editSection: {
+    marginHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  editLabel: { fontWeight: "600", letterSpacing: 0.4 },
+  typeButtons: { flexDirection: "row", gap: 8 },
+  typeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  typeDotSm: { width: 5, height: 5, borderRadius: 3 },
+  typeBtnText: { fontWeight: "600", letterSpacing: 0.3 },
+
+  // Account trigger
+  accountTrigger: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 4,
+  },
+  accountTriggerValue: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  accountEmojiBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accountTriggerName: { flex: 1 },
+
+  // Account sheet
+  sheetTitle: {
+    marginBottom: 12,
+  },
+  accountSheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  accountSheetName: {},
 
   // Actions
   actions: {
     flexDirection: "row",
     alignItems: "center",
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 16,
-  },
-  dismissBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
-  dismissLabel: { fontWeight: "500" },
-  addBtn: {
-    flex: 1,
+  actionOutline: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    paddingVertical: 13,
-    borderRadius: 14,
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  addLabel: { fontWeight: "600", letterSpacing: 0.3 },
-  btnLabel: { fontWeight: "500" },
-  actionBtn: {
+  actionFilled: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -889,7 +1278,29 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    borderWidth: 1,
   },
-  actionLabel: {},
+  actionText: {},
+
+  // Accepted footer
+  acceptedFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  acceptedText: {},
+
+  // Dismissed footer
+  dismissedFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dismissedLabel: {},
+  restoreText: {},
 });

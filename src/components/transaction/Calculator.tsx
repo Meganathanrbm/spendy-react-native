@@ -8,10 +8,9 @@ type Props = {
   accentColor: string;
 };
 
-// Each row: one operator on the left + three digit/symbol keys
 const ROWS: { op: string; keys: string[] }[] = [
   { op: "+", keys: ["7", "8", "9"] },
-  { op: "-", keys: ["4", "5", "6"] },
+  { op: "−", keys: ["4", "5", "6"] },
   { op: "×", keys: ["1", "2", "3"] },
   { op: "÷", keys: ["0", ".", "="] },
 ];
@@ -23,18 +22,17 @@ function evaluate(left: string, op: string, right: string): string {
   let result: number;
   switch (op) {
     case "+": result = a + b; break;
-    case "-": result = a - b; break;
+    case "−": result = a - b; break;
     case "×": result = a * b; break;
     case "÷": result = b === 0 ? a : a / b; break;
     default:  result = b;
   }
-  // Keep up to 2 decimal places, strip trailing zeros
   const rounded = Math.round(result * 100) / 100;
   return String(rounded);
 }
 
 export default function Calculator({ value, onChange, accentColor }: Props) {
-  const { colors, typography } = useTheme();
+  const { colors } = useTheme();
 
   const [pendingLeft, setPendingLeft] = useState<string | null>(null);
   const [pendingOp, setPendingOp] = useState<string | null>(null);
@@ -50,13 +48,11 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
       onChange(fresh ? "0." : current + ".");
       return;
     }
-    // Limit to 2 decimal places
     if (current.includes(".")) {
       const [, dec] = current.split(".");
       if (dec && dec.length >= 2) return;
     }
     const next = current === "0" || fresh ? key : current + key;
-    // Max 10 digits
     if (next.replace(".", "").length > 10) return;
     onChange(next);
   };
@@ -72,7 +68,6 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
       }
       return;
     }
-    // Chain: if there's already a pending op, evaluate first
     if (pendingLeft !== null && pendingOp !== null && !freshEntry) {
       const result = evaluate(pendingLeft, pendingOp, value);
       onChange(result);
@@ -88,28 +83,18 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
     <View style={styles.container}>
       {ROWS.map(({ op, keys }) => (
         <View key={op} style={styles.row}>
-          {/* Operator button */}
+          {/* Operator — surface3 bg, primary text */}
           <TouchableOpacity
             onPress={() => pressOp(op)}
             activeOpacity={0.65}
-            style={[
-              styles.key,
-              styles.opKey,
-              { backgroundColor: accentColor },
-            ]}
+            style={[styles.key, { backgroundColor: colors.surface3, borderColor: colors.border }]}
           >
-            <Text
-              style={[
-                styles.keyLabel,
-                styles.opLabel,
-                { fontSize: typography.size.xl, fontWeight: typography.weight.semibold },
-              ]}
-            >
+            <Text style={[styles.keyLabel, { color: accentColor, fontSize: 22, fontWeight: "500" }]}>
               {op}
             </Text>
           </TouchableOpacity>
 
-          {/* Digit/symbol keys */}
+          {/* Digit / equals keys */}
           {keys.map((key) => {
             const isEquals = key === "=";
             return (
@@ -120,7 +105,7 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
                 style={[
                   styles.key,
                   {
-                    backgroundColor: isEquals ? accentColor : colors.surfaceAlt,
+                    backgroundColor: isEquals ? colors.surface3 : colors.surface,
                     borderColor: colors.border,
                   },
                 ]}
@@ -129,9 +114,9 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
                   style={[
                     styles.keyLabel,
                     {
-                      color: isEquals ? "#fff" : colors.text,
-                      fontSize: typography.size.xl,
-                      fontWeight: typography.weight.medium,
+                      color: isEquals ? accentColor : colors.text,
+                      fontSize: 19,
+                      fontWeight: "500",
                     },
                   ]}
                 >
@@ -149,27 +134,21 @@ export default function Calculator({ value, onChange, accentColor }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: 6,
+    paddingHorizontal: 14,
     paddingBottom: 8,
   },
   row: {
-    flex: 1,
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
   key: {
     flex: 1,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
   },
-  opKey: {
-    borderWidth: 0,
-  },
   keyLabel: {},
-  opLabel: {
-    color: "#fff",
-  },
 });

@@ -8,11 +8,12 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { Plus } from "lucide-react-native";
+import { Plus, Wallet } from "lucide-react-native";
 import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../hooks/useTheme";
+import { useAuth } from "../../contexts/AuthContext";
 import { useBudgetsByMonth, useDeleteBudget } from "../../hooks/useBudgets";
 import { useTransactionsByMonth } from "../../hooks/useTransactions";
 import { getAllCategories } from "../../lib/helpers/categories";
@@ -30,7 +31,6 @@ import SetBudgetModal from "../../components/budgets/SetBudgetModal";
 type ModalState = {
   visible: boolean;
   categoryName: string;
-  categoryIcon: string;
   categoryColor: string;
   existingBudget?: Budget;
 };
@@ -38,12 +38,12 @@ type ModalState = {
 const CLOSED_MODAL: ModalState = {
   visible: false,
   categoryName: "",
-  categoryIcon: "",
   categoryColor: "#64748B",
 };
 
 export default function BudgetsScreen() {
   const { colors, typography } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [month, setMonth] = useState(currentMonth());
@@ -58,7 +58,7 @@ export default function BudgetsScreen() {
   const refetch = () => { refetchBudgets(); refetchTx(); };
 
   useEffect(() => {
-    getAllCategories().then(setCategories);
+    getAllCategories(user!.email).then(setCategories);
   }, []);
 
   // Spend per category this month
@@ -80,7 +80,7 @@ export default function BudgetsScreen() {
         const cat = categories.find((c) => c.name === b.categoryName);
         return {
           categoryName: b.categoryName,
-          categoryIcon: cat?.icon ?? "📦",
+
           categoryColor: cat?.color ?? "#64748B",
           limit: b.limit,
           spent: spentByCategory.get(b.categoryName) ?? 0,
@@ -116,7 +116,6 @@ export default function BudgetsScreen() {
     setModal({
       visible: true,
       categoryName: cat.name,
-      categoryIcon: cat.icon,
       categoryColor: cat.color,
       existingBudget: existing,
     });
@@ -277,7 +276,7 @@ export default function BudgetsScreen() {
         {/* Empty state */}
         {budgets.length === 0 && unbudgetedCategories.length === 0 && (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 44 }}>💰</Text>
+            <Wallet size={44} color={colors.textMuted} strokeWidth={1.5} />
             <Text style={[styles.emptyTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.semibold }]}>
               No budgets yet
             </Text>
@@ -293,7 +292,6 @@ export default function BudgetsScreen() {
         visible={modal.visible}
         onClose={() => setModal(CLOSED_MODAL)}
         categoryName={modal.categoryName}
-        categoryIcon={modal.categoryIcon}
         categoryColor={modal.categoryColor}
         month={month}
         existingBudget={modal.existingBudget}

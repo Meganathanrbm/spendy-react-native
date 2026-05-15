@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { X, Check, Star, StarOff, Trash2 } from "lucide-react-native";
+import { getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -29,13 +30,13 @@ type Props = {
   existing?: Account;
 };
 
-const ACCOUNT_TYPES: { key: AccountType; label: string; icon: string }[] = [
-  { key: "savings", label: "Savings", icon: "🏦" },
-  { key: "current", label: "Current", icon: "🏧" },
-  { key: "credit", label: "Credit Card", icon: "💳" },
-  { key: "wallet", label: "Wallet", icon: "👜" },
-  { key: "cash", label: "Cash", icon: "💵" },
-  { key: "investment", label: "Investment", icon: "📈" },
+const ACCOUNT_TYPES: { key: AccountType; label: string }[] = [
+  { key: "savings", label: "Savings" },
+  { key: "current", label: "Current" },
+  { key: "credit", label: "Credit Card" },
+  { key: "wallet", label: "Wallet" },
+  { key: "cash", label: "Cash" },
+  { key: "investment", label: "Investment" },
 ];
 
 const PRESET_COLORS = [
@@ -53,18 +54,6 @@ const PRESET_COLORS = [
   "#64748B",
 ];
 
-const PRESET_ICONS = [
-  "🏦",
-  "🏧",
-  "💳",
-  "👜",
-  "💵",
-  "📈",
-  "💰",
-  "🏠",
-  "📊",
-  "🎯",
-];
 
 export default function AddAccountModal({ visible, onClose, existing }: Props) {
   const { colors, typography } = useTheme();
@@ -75,7 +64,6 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("savings");
   const [balance, setBalance] = useState("0");
-  const [icon, setIcon] = useState("🏦");
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [bankName, setBankName] = useState("");
   const [lastFour, setLastFour] = useState("");
@@ -86,7 +74,6 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
       setName(existing.name);
       setType(existing.type);
       setBalance(String(existing.balance));
-      setIcon(existing.icon);
       setColor(existing.color);
       setBankName(existing.bankName ?? "");
       setLastFour(existing.lastFourDigits ?? "");
@@ -95,7 +82,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
       setName("");
       setType("savings");
       setBalance("0");
-      setIcon("🏦");
+
       setColor(PRESET_COLORS[0]);
       setBankName("");
       setLastFour("");
@@ -114,7 +101,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
       id: existing?.id ?? (uuid.v4() as string),
       name: name.trim(),
       type,
-      icon,
+      icon: type,
       color,
       balance: bal,
       isPrimary,
@@ -180,34 +167,6 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
               <X size={22} color={colors.textSecondary} strokeWidth={1.7} />
             </TouchableOpacity>
           </View>
-
-          {/* Icon picker */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>
-            ICON
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.iconRow}
-          >
-            {PRESET_ICONS.map((ic) => (
-              <TouchableOpacity
-                key={ic}
-                onPress={() => setIcon(ic)}
-                style={[
-                  styles.iconOption,
-                  {
-                    backgroundColor:
-                      icon === ic ? color + "33" : colors.surfaceAlt,
-                    borderColor: icon === ic ? color : colors.border,
-                    borderWidth: icon === ic ? 2 : 1,
-                  },
-                ]}
-              >
-                <Text style={{ fontSize: 22 }}>{ic}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {/* Color picker */}
           <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -279,7 +238,7 @@ export default function AddAccountModal({ visible, onClose, existing }: Props) {
                   ]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16 }}>{t.icon}</Text>
+                  {(() => { const Icon = getAccountTypeIcon(t.key); return <Icon size={16} color={active ? color : colors.textSecondary} strokeWidth={1.7} />; })()}
                   <Text
                     style={[
                       styles.typeLabel,

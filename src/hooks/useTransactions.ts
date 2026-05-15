@@ -9,66 +9,81 @@ import {
   deleteTransaction,
   clearAllTransactions,
 } from "../lib/api/transactions";
+import { useAuth } from "../contexts/AuthContext";
 import { Transaction } from "../types";
 
-export const TRANSACTIONS_KEY = ["transactions"] as const;
+export const useTransactions = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["transactions", user?.email],
+    queryFn: () => fetchTransactions(user!.email),
+    enabled: !!user,
+  });
+};
 
-export const useTransactions = () =>
-  useQuery({ queryKey: TRANSACTIONS_KEY, queryFn: fetchTransactions });
-
-export const useTransactionsByMonth = (month: string) =>
-  useQuery({
-    queryKey: [...TRANSACTIONS_KEY, month],
-    queryFn: () => fetchTransactionsByMonth(month),
+export const useTransactionsByMonth = (month: string) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["transactions", user?.email, month],
+    queryFn: () => fetchTransactionsByMonth(user!.email, month),
+    enabled: !!user,
     staleTime: 30_000,
   });
+};
 
-export const useTransactionsByPeriod = (days: number = 30) =>
-  useQuery({
-    queryKey: [...TRANSACTIONS_KEY, "period", days],
-    queryFn: () => fetchTransactionsByPeriod(days),
+export const useTransactionsByPeriod = (days: number = 30) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["transactions", user?.email, "period", days],
+    queryFn: () => fetchTransactionsByPeriod(user!.email, days),
+    enabled: !!user,
     staleTime: 30_000,
   });
+};
 
 export const useSaveTransaction = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: saveTransaction,
+    mutationFn: (tx: Transaction) => saveTransaction(user!.email, tx),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
-      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["transactions", user?.email] });
+      qc.invalidateQueries({ queryKey: ["accounts", user?.email] });
     },
   });
 };
 
 export const useUpdateTransaction = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ updated, original }: { updated: Transaction; original: Transaction }) =>
-      updateTransaction(updated, original),
+      updateTransaction(user!.email, updated, original),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
-      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["transactions", user?.email] });
+      qc.invalidateQueries({ queryKey: ["accounts", user?.email] });
     },
   });
 };
 
 export const useDeleteTransaction = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteTransaction,
+    mutationFn: (id: string) => deleteTransaction(user!.email, id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
-      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["transactions", user?.email] });
+      qc.invalidateQueries({ queryKey: ["accounts", user?.email] });
     },
   });
 };
 
 export const useClearTransactions = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: clearAllTransactions,
-    onSuccess: () => qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY }),
+    mutationFn: () => clearAllTransactions(user!.email),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions", user?.email] }),
   });
 };
 

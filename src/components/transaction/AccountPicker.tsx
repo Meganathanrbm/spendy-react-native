@@ -6,7 +6,7 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { ChevronDown, Check } from "lucide-react-native";
+import { Check } from "lucide-react-native";
 import { getAccountTypeIcon } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
 import { useAccounts } from "../../hooks/useAccounts";
@@ -31,32 +31,35 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
     <>
       <TouchableOpacity
         onPress={() => setOpen(true)}
-        style={[
-          styles.trigger,
-          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-        ]}
-        activeOpacity={0.75}
+        style={styles.wrapper}
+        activeOpacity={0.8}
       >
         <Text
           style={[
-            styles.triggerLabel,
-            { color: colors.textMuted, fontSize: typography.size.xs },
+            styles.fieldLabel,
+            { color: colors.textMuted },
           ]}
         >
           {label}
         </Text>
-        <View style={styles.triggerValue}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {selected ? (
             <>
-              {(() => { const Icon = getAccountTypeIcon(selected.type); return <Icon size={18} color={selected.color} strokeWidth={1.7} />; })()}
+              <View style={[styles.iconBox, { backgroundColor: selected.color + "24" }]}>
+                {(() => {
+                  const Icon = getAccountTypeIcon(selected.type);
+                  return <Icon size={14} color={selected.color} strokeWidth={1.7} />;
+                })()}
+              </View>
               <Text
                 style={[
-                  styles.valueName,
-                  {
-                    color: colors.text,
-                    fontSize: typography.size.base,
-                    fontWeight: typography.weight.medium,
-                  },
+                  styles.fieldValue,
+                  { color: colors.text },
                 ]}
                 numberOfLines={1}
               >
@@ -64,23 +67,14 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
               </Text>
             </>
           ) : (
-            <Text
-              style={[
-                styles.valueName,
-                { color: colors.textMuted, fontSize: typography.size.base },
-              ]}
-            >
+            <Text style={[styles.fieldValue, { color: colors.textMuted }]}>
               Select…
             </Text>
           )}
-          <ChevronDown size={14} color={colors.textMuted} strokeWidth={1.7} />
         </View>
       </TouchableOpacity>
-      <BottomSheet
-        visible={open}
-        onClose={() => setOpen(false)}
-        maxHeight={0.55}
-      >
+
+      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={0.55}>
         <Text
           style={[
             styles.sheetTitle,
@@ -91,7 +85,7 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
             },
           ]}
         >
-          Select Account
+          Select account
         </Text>
         <FlatList
           data={accounts}
@@ -100,17 +94,14 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
             const isSelected = item.id === selectedId;
             return (
               <TouchableOpacity
-                onPress={() => {
-                  onSelect(item);
-                  setOpen(false);
-                }}
+                onPress={() => { onSelect(item); setOpen(false); }}
                 style={[
                   styles.option,
                   {
                     borderBottomColor: colors.divider,
-                    backgroundColor: isSelected ? colors.surfaceElevated : "transparent",
+                    backgroundColor: isSelected ? colors.surface3 : "transparent",
                     borderWidth: isSelected ? StyleSheet.hairlineWidth : 0,
-                    borderColor: isSelected ? (colors.borderStrong ?? colors.border) : "transparent",
+                    borderColor: isSelected ? colors.borderStrong : "transparent",
                     borderRadius: isSelected ? 10 : 0,
                     marginHorizontal: isSelected ? 8 : 0,
                     paddingHorizontal: isSelected ? 8 : 16,
@@ -118,41 +109,30 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
                 ]}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.optionIcon,
-                    { backgroundColor: item.color + "22" },
-                  ]}
-                >
-                  {(() => { const Icon = getAccountTypeIcon(item.type); return <Icon size={18} color={item.color} strokeWidth={1.7} />; })()}
+                <View style={[styles.optionIconBox, { backgroundColor: item.color + "24" }]}>
+                  {(() => {
+                    const Icon = getAccountTypeIcon(item.type);
+                    return <Icon size={18} color={item.color} strokeWidth={1.7} />;
+                  })()}
                 </View>
                 <View style={styles.optionInfo}>
                   <Text
                     style={[
                       styles.optionName,
-                      {
-                        color: colors.text,
-                        fontWeight: typography.weight.medium,
-                      },
+                      { color: colors.text, fontWeight: typography.weight.medium },
                     ]}
                   >
                     {item.name}
                   </Text>
-                  <Text
-                    style={[
-                      styles.optionType,
-                      { color: colors.textMuted, fontSize: typography.size.xs },
-                    ]}
-                  >
+                  <Text style={[styles.optionType, { color: colors.textMuted, fontSize: typography.size.xs }]}>
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                    {item.lastFourDigits ? ` •• ${item.lastFourDigits}` : ""}
                   </Text>
                 </View>
                 <Text style={[styles.optionBalance, { color: colors.text, fontSize: typography.size.sm, fontWeight: typography.weight.semibold }]}>
                   {formatCurrency(item.balance, { compact: true })}
                 </Text>
-                {isSelected && (
-                  <Check size={16} color={colors.primary} strokeWidth={2} />
-                )}
+                {isSelected && <Check size={16} color={colors.primary} strokeWidth={2} />}
               </TouchableOpacity>
             );
           }}
@@ -163,20 +143,39 @@ export default function AccountPicker({ label, selectedId, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  trigger: {
+  wrapper: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 4,
   },
-  triggerLabel: { fontWeight: "600" },
-  triggerValue: {
+  fieldLabel: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 48,
   },
-  valueName: { flex: 1 },
+  iconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fieldValue: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: "500",
+  },
   sheetTitle: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -189,10 +188,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 12,
   },
-  optionIcon: {
+  optionIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -80,7 +80,7 @@ const SignupScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
             <User size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black"
               placeholder="Full Name"
               value={fullName}
               onChangeText={setFullName}
@@ -91,7 +91,7 @@ const SignupScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
             <Mail size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black"
               placeholder="Email"
               keyboardType="email-address"
               value={email}
@@ -104,7 +104,7 @@ const SignupScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
             <Lock size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black "
               placeholder="Password"
               secureTextEntry={!showPassword}
               value={password}
@@ -123,7 +123,7 @@ const SignupScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-6">
             <CheckCheck size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black"
               placeholder="Confirm Password"
               secureTextEntry={!showPassword}
               value={confirmPassword}
@@ -147,19 +147,6 @@ const SignupScreen = () => {
             <View className="flex-1 h-px bg-gray-300" />
             <Text className="mx-4 text-gray-400">Or sign up with</Text>
             <View className="flex-1 h-px bg-gray-300" />
-          </View>
-
-          {/* Social Buttons */}
-          <View className="flex-row justify-around mb-6">
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <FontAwesome name="facebook" size={24} color="#1877F2" />
-            </TouchableOpacity>
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="google" size={24} color="#DB4437" />
-            </TouchableOpacity>
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="apple" size={24} color="#000" />
-            </TouchableOpacity>
           </View>
 
           {/* Footer */}

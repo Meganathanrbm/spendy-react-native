@@ -29,6 +29,42 @@ import {
   Bitcoin,
   Building2,
   Shield,
+  // Picker extras
+  Coffee,
+  Heart,
+  Dumbbell,
+  Music,
+  Camera,
+  Star,
+  Zap,
+  Bell,
+  Phone,
+  Globe,
+  Tv,
+  Users,
+  GraduationCap,
+  Bus,
+  Laptop,
+  Code,
+  Wine,
+  DollarSign,
+  Activity,
+  Scissors,
+  Mountain,
+  Sun,
+  Leaf,
+  Gamepad2,
+  Pizza,
+  Apple,
+  Flame,
+  Pen,
+  MapPin,
+  Headphones,
+  Watch,
+  Shirt,
+  Baby,
+  Bike,
+  Droplets,
 } from "lucide-react-native";
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -78,9 +114,38 @@ export const ASSET_TYPE_ICONS: Record<string, LucideIcon> = {
   other:         Package,
 };
 
-/** Returns the Lucide icon for a category, with a fallback. */
+/** All icons available in the custom category icon picker. */
+export const PICKER_ICONS: Record<string, LucideIcon> = {
+  // Food & Drink
+  Utensils, Coffee, Pizza, Wine, Apple, ShoppingCart, ShoppingBag,
+  // Transport
+  Car, Bus, Plane, Bike,
+  // Home & Utilities
+  House, Tv, Droplets, Flame,
+  // Health & Fitness
+  Pill, Heart, Dumbbell, Activity, Scissors,
+  // Work & Education
+  Briefcase, Laptop, Code, GraduationCap, BookOpen, Pen,
+  // Entertainment
+  Film, Music, Camera, Gamepad2, Headphones,
+  // Finance
+  Banknote, CreditCard, Wallet, PiggyBank, ReceiptText, DollarSign, Landmark, Tag, TrendingUp, TrendingDown,
+  // People & Social
+  Users, Gift, Baby,
+  // Travel & Nature
+  Globe, MapPin, Mountain, Sun, Leaf,
+  // Other
+  Star, Zap, Bell, Phone, Watch, Shirt, Package,
+};
+
+/** Returns the Lucide icon for a category by category name. */
 export function getCategoryIcon(category: string): LucideIcon {
   return CATEGORY_ICONS[category] ?? Package;
+}
+
+/** Returns the Lucide icon component by Lucide icon name (for custom categories). */
+export function getIconByName(name: string): LucideIcon {
+  return PICKER_ICONS[name] ?? Package;
 }
 
 /** Returns the Lucide icon for an account type. */

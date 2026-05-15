@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { CircleX } from "lucide-react-native";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../hooks/useTheme";
 import { useSaveBudget } from "../../hooks/useBudgets";
@@ -21,7 +22,6 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   categoryName: string;
-  categoryIcon: string;
   categoryColor: string;
   month: string;
   existingBudget?: Budget;
@@ -31,11 +31,11 @@ export default function SetBudgetModal({
   visible,
   onClose,
   categoryName,
-  categoryIcon,
   categoryColor,
   month,
   existingBudget,
 }: Props) {
+  const CategoryIcon = getCategoryIcon(categoryName);
   const { colors, typography } = useTheme();
   const saveMutation = useSaveBudget();
   const [limitStr, setLimitStr] = useState("");
@@ -73,7 +73,7 @@ export default function SetBudgetModal({
         {/* Header */}
         <View style={styles.header}>
           <View style={[styles.iconBox, { backgroundColor: categoryColor + "22" }]}>
-            <Text style={styles.icon}>{categoryIcon}</Text>
+            <CategoryIcon size={22} color={categoryColor} strokeWidth={1.7} />
           </View>
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>

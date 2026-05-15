@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { PieChart } from "react-native-svg-charts";
 import * as shape from "d3-shape";
 import { fetchTransactions } from "../../lib/api/transactions";
+import { useAuth } from "../../contexts/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
+import { getCategoryColor } from "../../lib/helpers/categoryColors";
 
 const categoryColors: Record<string, string> = {
   Shopping: "#3b82f6",
@@ -15,9 +18,11 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function CategoryScreen() {
+  const { user } = useAuth();
   const { data: transactions = [] } = useQuery({
-    queryKey: ["transactions"],
-    queryFn: fetchTransactions,
+    queryKey: ["transactions", user?.email],
+    queryFn: () => fetchTransactions(user!.email),
+    enabled: !!user,
   });
 
   // Group transactions by category
@@ -94,9 +99,9 @@ export default function CategoryScreen() {
             <View className="flex-row items-center gap-x-3">
               <View
                 className="w-10 h-10 rounded-lg items-center justify-center"
-                style={{ backgroundColor: categoryColors[category] || "#ccc" }}
+                style={{ backgroundColor: (getCategoryColor(category) || "#ccc") + "22" }}
               >
-                <Text className="text-white text-lg">{getIcon(category)}</Text>
+                {(() => { const Icon = getCategoryIcon(category); return <Icon size={20} color={getCategoryColor(category) || "#ccc"} strokeWidth={1.7} />; })()}
               </View>
               <View>
                 <Text className="text-gray-800 font-semibold">{category}</Text>
@@ -115,13 +120,3 @@ export default function CategoryScreen() {
   );
 }
 
-const getIcon = (category: string) => {
-  const icons: Record<string, string> = {
-    Home: "🏠",
-    "Food & Drink": "🍔",
-    Shopping: "🛍️",
-    Trips: "🛳️",
-    Transport: "🚌",
-  };
-  return icons[category] || "💸";
-};

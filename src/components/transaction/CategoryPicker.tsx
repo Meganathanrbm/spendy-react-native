@@ -6,9 +6,9 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { ChevronDown } from "lucide-react-native";
-import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
+import { getIconByName } from "../../lib/helpers/categoryIcons";
 import { useTheme } from "../../hooks/useTheme";
+import { useAuth } from "../../contexts/AuthContext";
 import { getAllCategories } from "../../lib/helpers/categories";
 import BottomSheet from "../common/BottomSheet";
 import { Category, TransactionType } from "../../types";
@@ -21,11 +21,12 @@ type Props = {
 
 export default function CategoryPicker({ transactionType, selectedName, onSelect }: Props) {
   const { colors, typography } = useTheme();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    getAllCategories().then((all) => {
+    getAllCategories(user!.email).then((all) => {
       const type = transactionType === "transfer" ? "expense" : transactionType;
       setCategories(all.filter((c) => c.type === type));
     });
@@ -37,39 +38,43 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
     <>
       <TouchableOpacity
         onPress={() => setOpen(true)}
-        style={[
-          styles.trigger,
-          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-        ]}
-        activeOpacity={0.75}
+        style={styles.wrapper}
+        activeOpacity={0.8}
       >
-        <Text style={[styles.triggerLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+        <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
           CATEGORY
         </Text>
-        <View style={styles.triggerValue}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {selected ? (
             <>
-              <View style={[styles.iconDot, { backgroundColor: selected.color + "33" }]}>
-                {(() => { const Icon = getCategoryIcon(selected.name); return <Icon size={14} color={selected.color} strokeWidth={1.7} />; })()}
+              <View style={[styles.iconBox, { backgroundColor: selected.color + "24" }]}>
+                {(() => {
+                  const Icon = getIconByName(selected.icon);
+                  return <Icon size={14} color={selected.color} strokeWidth={1.7} />;
+                })()}
               </View>
               <Text
-                style={[styles.valueName, { color: colors.text, fontSize: typography.size.base, fontWeight: typography.weight.medium }]}
+                style={[styles.fieldValue, { color: colors.text }]}
                 numberOfLines={1}
               >
                 {selected.name}
               </Text>
             </>
           ) : (
-            <Text style={[styles.valueName, { color: colors.textMuted }]}>Select…</Text>
+            <Text style={[styles.fieldValue, { color: colors.textMuted }]}>Select…</Text>
           )}
-          <ChevronDown size={14} color={colors.textMuted} strokeWidth={1.7} />
         </View>
       </TouchableOpacity>
 
       <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={0.7}>
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.bold }]}>
-            Category
+            Select category
           </Text>
           <Text style={[styles.sheetSub, { color: colors.textMuted, fontSize: typography.size.xs }]}>
             {transactionType === "income" ? "Income source" : "Where did the money go?"}
@@ -90,15 +95,17 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
                   styles.categoryCell,
                   {
                     borderColor: isSelected ? item.color : colors.border,
-                    borderWidth: StyleSheet.hairlineWidth,
+                    borderWidth: isSelected ? 1.5 : StyleSheet.hairlineWidth,
                     backgroundColor: isSelected ? item.color + "18" : "transparent",
                   },
-                  isSelected && { borderColor: item.color, borderWidth: 1.5 },
                 ]}
                 activeOpacity={0.7}
               >
                 <View style={[styles.categoryIcon, { backgroundColor: item.color + "22" }]}>
-                  {(() => { const Icon = getCategoryIcon(item.name); return <Icon size={18} color={item.color} strokeWidth={1.7} />; })()}
+                  {(() => {
+                    const Icon = getIconByName(item.icon);
+                    return <Icon size={22} color={item.color} strokeWidth={1.7} />;
+                  })()}
                 </View>
                 <Text
                   style={[
@@ -123,27 +130,39 @@ export default function CategoryPicker({ transactionType, selectedName, onSelect
 }
 
 const styles = StyleSheet.create({
-  trigger: {
+  wrapper: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 4,
   },
-  triggerLabel: { fontWeight: "600" },
-  triggerValue: {
+  fieldLabel: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  iconDot: {
-    width: 24,
-    height: 24,
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 48,
+  },
+  iconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  valueName: { flex: 1 },
+  fieldValue: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: "500",
+  },
   sheetHeader: { paddingHorizontal: 16, marginBottom: 12 },
   sheetTitle: {},
   sheetSub: { marginTop: 2 },
@@ -159,9 +178,9 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   categoryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },

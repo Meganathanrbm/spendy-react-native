@@ -1,12 +1,6 @@
-import React, { useRef, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Animated,
-  LayoutChangeEvent,
-} from "react-native";
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Check } from "lucide-react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { TransactionType } from "../../types";
 
@@ -15,95 +9,59 @@ type Props = {
   onChange: (type: TransactionType) => void;
 };
 
-const TYPES: { key: TransactionType; label: string; emoji: string }[] = [
-  { key: "income", label: "INCOME", emoji: "↓" },
-  { key: "expense", label: "EXPENSE", emoji: "↑" },
-  { key: "transfer", label: "TRANSFER", emoji: "⇄" },
+const TYPES: { key: TransactionType; label: string }[] = [
+  { key: "income", label: "INCOME" },
+  { key: "expense", label: "EXPENSE" },
+  { key: "transfer", label: "TRANSFER" },
 ];
 
 export default function TypeToggle({ value, onChange }: Props) {
   const { colors, typography } = useTheme();
-  const [containerW, setContainerW] = useState(0);
-  const tabScales = useRef(TYPES.map(() => new Animated.Value(1))).current;
 
-  const activeIndex = TYPES.findIndex((t) => t.key === value);
-  const tabW = containerW / TYPES.length;
-  const pillX = useRef(new Animated.Value(activeIndex * tabW + 3)).current;
-
-  const pillColor =
-    value === "income" ? colors.income
-    : value === "expense" ? colors.expense
-    : colors.primary;
-
-  // Refs so callbacks stay stable regardless of derived value changes
-  const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
-  const tabWRef = useRef(tabW);
-  tabWRef.current = tabW;
-
-  const handleLayout = useCallback((e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width;
-    setContainerW(w);
-    pillX.setValue(activeIndexRef.current * (w / TYPES.length) + 3);
-  }, [pillX]);
-
-  const handleOnpress = useCallback((key: number, type: TransactionType) => {
-    onChange(type);
-    pillX.setValue(key * tabWRef.current + 3);
-  }, [onChange, pillX]);
+  const activeColor =
+    value === "income"
+      ? colors.income
+      : value === "expense"
+        ? colors.expense
+        : colors.primary;
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-      ]}
-      onLayout={handleLayout}
-    >
-      {/* Sliding pill */}
-      {
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.pill,
-            {
-              width: tabW - 6,
-              backgroundColor: pillColor,
-              transform: [{ translateX: pillX }],
-            },
-          ]}
-        />
-      }
-
+    <View style={styles.container}>
       {TYPES.map((t, i) => {
         const isActive = value === t.key;
+        const isLast = i === TYPES.length - 1;
         return (
-          <Pressable
-            key={t.key}
-            onPress={() => handleOnpress(i, t.key)}
-            style={styles.tab}
-          >
-            <Animated.View
-              style={[
-                styles.tabInner,
-                { transform: [{ scale: tabScales[i] }] },
-              ]}
+          <React.Fragment key={t.key}>
+            <TouchableOpacity
+              onPress={() => onChange(t.key)}
+              style={styles.tab}
+              activeOpacity={0.7}
             >
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    fontSize: typography.size.xs,
-                    fontWeight: typography.weight.bold,
-                    letterSpacing: typography.tracking?.wide ?? 0.6,
-                    color: isActive ? "#fff" : colors.textSecondary,
-                  },
-                ]}
-              >
-                {t.label}
-              </Text>
-            </Animated.View>
-          </Pressable>
+              <View style={styles.tabContent}>
+                {isActive && (
+                  <View style={[styles.checkCircle, { backgroundColor: activeColor }]}>
+                    <Check size={11} color={colors.textInverse} strokeWidth={3} />
+                  </View>
+                )}
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      fontSize: 13,
+                      fontWeight: isActive ? typography.weight.bold : typography.weight.medium,
+                      letterSpacing: 1.2,
+                      color: isActive ? colors.text : colors.textMuted,
+                    },
+                  ]}
+                >
+                  {t.label}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {!isLast && (
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            )}
+          </React.Fragment>
         );
       })}
     </View>
@@ -113,32 +71,32 @@ export default function TypeToggle({ value, onChange }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: "hidden",
+    alignItems: "center",
     marginHorizontal: 16,
-    marginBottom: 12,
-    position: "relative",
-    height: 42,
-  },
-  pill: {
-    position: "absolute",
-    top: 3,
-    bottom: 3,
-    borderRadius: 9,
-    zIndex: 0,
+    marginBottom: 10,
+    height: 36,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
+    height: "100%",
   },
-  tabInner: {
+  tabContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  checkCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+  },
+  separator: {
+    width: 1,
+    height: 16,
   },
   label: {},
 });

@@ -1,29 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Asset } from "../../types";
 
-const KEY = "@spendy_assets";
+const storageKey = (email: string) => `@spendy_assets_${email}`;
 
-export const getAssets = async (): Promise<Asset[]> => {
-  const json = await AsyncStorage.getItem(KEY);
+export const getAssets = async (email: string): Promise<Asset[]> => {
+  const json = await AsyncStorage.getItem(storageKey(email));
   return json ? JSON.parse(json) : [];
 };
 
-export const saveAsset = async (asset: Asset): Promise<void> => {
-  const all = await getAssets();
-  await AsyncStorage.setItem(KEY, JSON.stringify([...all, asset]));
+export const saveAsset = async (email: string, asset: Asset): Promise<void> => {
+  const all = await getAssets(email);
+  await AsyncStorage.setItem(storageKey(email), JSON.stringify([...all, asset]));
 };
 
-export const updateAsset = async (updated: Asset): Promise<void> => {
-  const all = await getAssets();
+export const updateAsset = async (email: string, updated: Asset): Promise<void> => {
+  const all = await getAssets(email);
   await AsyncStorage.setItem(
-    KEY,
-    JSON.stringify(all.map((a) => (a.id === updated.id ? updated : a)))
+    storageKey(email),
+    JSON.stringify(all.map((a) => (a.id === updated.id ? updated : a))),
   );
 };
 
-export const deleteAsset = async (id: string): Promise<void> => {
-  const all = await getAssets();
-  await AsyncStorage.setItem(KEY, JSON.stringify(all.filter((a) => a.id !== id)));
+export const deleteAsset = async (email: string, id: string): Promise<void> => {
+  const all = await getAssets(email);
+  await AsyncStorage.setItem(
+    storageKey(email),
+    JSON.stringify(all.filter((a) => a.id !== id)),
+  );
 };
 
 // ─── Portfolio Calculations ───────────────────────────────────────────────────
@@ -34,16 +37,14 @@ export type PortfolioSummary = {
   totalReturns: number;
   totalReturnsPercent: number;
   byType: Record<string, { invested: number; current: number }>;
-  bySubType: Record<string, { invested: number; current: number }>;
 };
 
-export const getPortfolioSummary = async (): Promise<PortfolioSummary> => {
-  const assets = await getAssets();
+export const getPortfolioSummary = async (email: string): Promise<PortfolioSummary> => {
+  const assets = await getAssets(email);
 
   let totalInvested = 0;
   let totalCurrentValue = 0;
   const byType: PortfolioSummary["byType"] = {};
-  const bySubType: PortfolioSummary["bySubType"] = {};
 
   for (const a of assets) {
     totalInvested += a.investedAmount;
@@ -52,10 +53,6 @@ export const getPortfolioSummary = async (): Promise<PortfolioSummary> => {
     if (!byType[a.type]) byType[a.type] = { invested: 0, current: 0 };
     byType[a.type].invested += a.investedAmount;
     byType[a.type].current += a.currentValue;
-
-    if (!bySubType[a.subType]) bySubType[a.subType] = { invested: 0, current: 0 };
-    bySubType[a.subType].invested += a.investedAmount;
-    bySubType[a.subType].current += a.currentValue;
   }
 
   const totalReturns = totalCurrentValue - totalInvested;
@@ -68,6 +65,5 @@ export const getPortfolioSummary = async (): Promise<PortfolioSummary> => {
     totalReturns,
     totalReturnsPercent,
     byType,
-    bySubType,
   };
 };

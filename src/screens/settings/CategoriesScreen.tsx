@@ -8,10 +8,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 
 import { useTheme } from "../../hooks/useTheme";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   getAllCategories, saveCustomCategory, deleteCustomCategory,
 } from "../../lib/helpers/categories";
-import { getCategoryIcon } from "../../lib/helpers/categoryIcons";
+import { getIconByName, PICKER_ICONS } from "../../lib/helpers/categoryIcons";
 import { Category } from "../../types";
 import { layout } from "../../theme/spacing";
 
@@ -31,12 +32,14 @@ function AddCategoryModal({
   const [type, setType] = useState<"expense" | "income">(presetType);
   const [name, setName] = useState("");
   const [color, setColor] = useState(PALETTE[0]);
+  const [icon, setIcon] = useState("Package");
 
   useEffect(() => {
     if (visible) {
       setType(presetType);
       setName("");
       setColor(PALETTE[0]);
+      setIcon("Package");
     }
   }, [visible, presetType]);
 
@@ -45,7 +48,7 @@ function AddCategoryModal({
     onSave({
       id: uuid.v4() as string,
       name: name.trim(),
-      icon: "📦",
+      icon,
       color,
       type,
       isCustom: true,
@@ -75,7 +78,7 @@ function AddCategoryModal({
           {/* Icon preview */}
           <View style={styles.iconPreviewWrap}>
             <View style={[styles.iconPreview, { backgroundColor: color + "22" }]}>
-              <Text style={{ fontSize: 32 }}>📦</Text>
+              {(() => { const PreviewIcon = getIconByName(icon); return <PreviewIcon size={32} color={color} strokeWidth={1.5} />; })()}
             </View>
           </View>
 
@@ -114,6 +117,24 @@ function AddCategoryModal({
             />
           </View>
 
+          {/* Icon */}
+          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>ICON</Text>
+          <View style={styles.iconPickerGrid}>
+            {Object.entries(PICKER_ICONS).map(([name, IconComp]) => (
+              <TouchableOpacity
+                key={name}
+                onPress={() => setIcon(name)}
+                style={[
+                  styles.iconPickerCell,
+                  { backgroundColor: icon === name ? color + "22" : colors.surfaceAlt,
+                    borderColor: icon === name ? color : "transparent" },
+                ]}
+              >
+                <IconComp size={20} color={icon === name ? color : colors.textSecondary} strokeWidth={1.7} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* Color */}
           <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>COLOR</Text>
           <View style={styles.colorGrid}>
@@ -140,13 +161,14 @@ function AddCategoryModal({
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function CategoriesScreen({ navigation }: any) {
   const { colors, typography } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<"expense" | "income">("expense");
   const [adding, setAdding] = useState(false);
 
-  const load = () => getAllCategories().then(setCategories);
+  const load = () => getAllCategories(user!.email).then(setCategories);
   useEffect(() => { load(); }, []);
 
   const defaults = categories.filter((c) => !c.isCustom && c.type === tab);
@@ -155,18 +177,18 @@ export default function CategoriesScreen({ navigation }: any) {
   const handleDelete = (cat: Category) => {
     Alert.alert("Delete Category", `Delete "${cat.name}"?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await deleteCustomCategory(cat.id); load(); } },
+      { text: "Delete", style: "destructive", onPress: async () => { await deleteCustomCategory(user!.email, cat.id); load(); } },
     ]);
   };
 
   const handleSave = async (cat: Category) => {
-    await saveCustomCategory(cat);
+    await saveCustomCategory(user!.email, cat);
     setAdding(false);
     load();
   };
 
   const renderCategoryCard = (cat: Category, isCustom = false) => {
-    const Icon = getCategoryIcon(cat.name);
+    const Icon = getIconByName(cat.icon);
     return (
       <View
         key={cat.id}
@@ -405,6 +427,14 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   nameInputText: { padding: 0 },
+
+  iconPickerGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 18 },
+  iconPickerCell: {
+    width: 44, height: 44,
+    borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5,
+  },
 
   colorGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   colorSwatch: {

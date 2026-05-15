@@ -12,7 +12,14 @@ import {
   Image,
 } from "react-native";
 import { FontAwesome, AntDesign } from "@expo/vector-icons";
-import { Mail, Lock, Eye, EyeOff, Square, CheckSquare } from "lucide-react-native";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Square,
+  CheckSquare,
+} from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -78,7 +85,7 @@ const LoginScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-4">
             <Mail size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black"
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -91,14 +98,18 @@ const LoginScreen = () => {
           <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full mb-2">
             <Lock size={20} color="#374151" strokeWidth={1.7} />
             <TextInput
-              className="flex-1 ml-2"
+              className="flex-1 ml-2 placeholder:text-black "
               placeholder="Password"
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              {showPassword ? <EyeOff size={20} color="#374151" strokeWidth={1.7} /> : <Eye size={20} color="#374151" strokeWidth={1.7} />}
+              {showPassword ? (
+                <EyeOff size={20} color="#374151" strokeWidth={1.7} />
+              ) : (
+                <Eye size={20} color="#374151" strokeWidth={1.7} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -108,7 +119,11 @@ const LoginScreen = () => {
               className="flex-row items-center"
               onPress={() => setRememberMe(!rememberMe)}
             >
-              {rememberMe ? <CheckSquare size={20} color="#000" strokeWidth={1.7} /> : <Square size={20} color="#000" strokeWidth={1.7} />}
+              {rememberMe ? (
+                <CheckSquare size={20} color="#000" strokeWidth={1.7} />
+              ) : (
+                <Square size={20} color="#000" strokeWidth={1.7} />
+              )}
               <Text className="ml-2 text-gray-700">Remember me</Text>
             </TouchableOpacity>
             <TouchableOpacity>
@@ -134,19 +149,6 @@ const LoginScreen = () => {
             <View className="flex-1 h-px bg-gray-300" />
             <Text className="mx-4 text-gray-400">Or Login with</Text>
             <View className="flex-1 h-px bg-gray-300" />
-          </View>
-
-          {/* Social Login */}
-          <View className="flex-row justify-around mb-6">
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <FontAwesome name="facebook" size={24} color="#1877F2" />
-            </TouchableOpacity>
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="google" size={24} color="#DB4437" />
-            </TouchableOpacity>
-            <TouchableOpacity className="p-4 border rounded-lg">
-              <AntDesign name="apple" size={24} color="#000" />
-            </TouchableOpacity>
           </View>
 
           {/* Footer */}

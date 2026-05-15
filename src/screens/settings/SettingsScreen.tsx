@@ -39,7 +39,7 @@ type SettingRow = {
 export default function SettingsScreen() {
   const { colors, typography } = useTheme();
   const { toggleTheme, mode } = useThemeContext();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
 
@@ -53,12 +53,13 @@ export default function SettingsScreen() {
           text: "Clear Everything",
           style: "destructive",
           onPress: async () => {
+            const email = user!.email;
             await AsyncStorage.multiRemove([
-              "@spendy_transactions",
-              "@spendy_accounts",
-              "@spendy_budgets",
-              "@spendy_assets",
-              "@spendy_custom_categories",
+              `@spendy_transactions_${email}`,
+              `@spendy_accounts_${email}`,
+              `@spendy_budgets_${email}`,
+              `@spendy_assets_${email}`,
+              `@spendy_custom_categories_${email}`,
             ]);
             Alert.alert("Done", "All data has been cleared.");
           },
@@ -100,8 +101,9 @@ export default function SettingsScreen() {
     },
     {
       icon: Cloud,
-      label: "Export Data",
-      sublabel: "Coming soon",
+      label: "Data Management",
+      sublabel: "Export & import your data",
+      onPress: () => navigation.navigate("DataManagement"),
     },
     {
       icon: ShieldCheck,

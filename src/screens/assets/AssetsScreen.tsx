@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Alert, Animated, Pressable,
 } from "react-native";
-import { Plus, TrendingUp, TrendingDown, CirclePlus } from "lucide-react-native";
+import { Plus, TrendingUp, TrendingDown, CirclePlus, ChartNoAxesColumn } from "lucide-react-native";
 import { ASSET_TYPE_ICONS } from "../../lib/helpers/categoryIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -57,24 +57,16 @@ export default function AssetsScreen() {
     return map;
   }, [assets]);
 
-  // Donut slices by subType
+  // Donut slices by type
   const donutSlices: DonutSlice[] = useMemo(() => {
     if (!summary) return [];
-    const subTypeColors: Record<string, string> = {
-      equity:      "#2D6A4F",
-      debt:        "#457B9D",
-      gold:        "#F59E0B",
-      hybrid:      "#8B5CF6",
-      real_estate: "#EC4899",
-      other:       "#64748B",
-    };
-    return Object.entries(summary.bySubType)
+    return Object.entries(summary.byType)
       .filter(([, v]) => v.current > 0)
       .map(([key, v]) => ({
         key,
-        label: key.charAt(0).toUpperCase() + key.slice(1),
+        label: ASSET_TYPE_META[key]?.label ?? key,
         value: v.current,
-        color: subTypeColors[key] ?? "#64748B",
+        color: ASSET_TYPE_META[key]?.color ?? "#64748B",
       }));
   }, [summary]);
 
@@ -188,7 +180,7 @@ export default function AssetsScreen() {
         {assets.length === 0 ? (
           <View style={styles.empty}>
             <View style={[styles.emptyIconRing, { backgroundColor: colors.primaryMuted ?? colors.surfaceAlt }]}>
-              <Text style={{ fontSize: 36 }}>📊</Text>
+              <ChartNoAxesColumn size={36} color={colors.textMuted} strokeWidth={1.5} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text, fontSize: typography.size.lg, fontWeight: typography.weight.semibold }]}>
               No assets yet

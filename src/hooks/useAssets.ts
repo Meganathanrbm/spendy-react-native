@@ -6,39 +6,50 @@ import {
   deleteAsset,
   getPortfolioSummary,
 } from "../lib/api/assets";
+import { useAuth } from "../contexts/AuthContext";
 import { Asset } from "../types";
 
-export const ASSETS_KEY = ["assets"] as const;
-
-export const useAssets = () =>
-  useQuery({ queryKey: ASSETS_KEY, queryFn: getAssets });
-
-export const usePortfolioSummary = () =>
-  useQuery({
-    queryKey: [...ASSETS_KEY, "summary"],
-    queryFn: getPortfolioSummary,
+export const useAssets = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["assets", user?.email],
+    queryFn: () => getAssets(user!.email),
+    enabled: !!user,
   });
+};
+
+export const usePortfolioSummary = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["assets", user?.email, "summary"],
+    queryFn: () => getPortfolioSummary(user!.email),
+    enabled: !!user,
+  });
+};
 
 export const useSaveAsset = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: saveAsset,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),
+    mutationFn: (asset: Asset) => saveAsset(user!.email, asset),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assets", user?.email] }),
   });
 };
 
 export const useUpdateAsset = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: updateAsset,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),
+    mutationFn: (asset: Asset) => updateAsset(user!.email, asset),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assets", user?.email] }),
   });
 };
 
 export const useDeleteAsset = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteAsset(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ASSETS_KEY }),
+    mutationFn: (id: string) => deleteAsset(user!.email, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assets", user?.email] }),
   });
 };

@@ -4,10 +4,11 @@ import {
   StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert,
 } from "react-native";
 import { X } from "lucide-react-native";
+import { ASSET_TYPE_ICONS } from "../../lib/helpers/categoryIcons";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../hooks/useTheme";
 import { useSaveAsset, useUpdateAsset } from "../../hooks/useAssets";
-import { Asset, AssetType, AssetSubType } from "../../types";
+import { Asset, AssetType } from "../../types";
 import BottomSheet from "../common/BottomSheet";
 import { ASSET_TYPE_META } from "./AssetCard";
 
@@ -16,15 +17,6 @@ type Props = {
   onClose: () => void;
   existing?: Asset;
 };
-
-const SUB_TYPES: { key: AssetSubType; label: string }[] = [
-  { key: "equity",       label: "Equity" },
-  { key: "debt",         label: "Debt" },
-  { key: "gold",         label: "Gold" },
-  { key: "hybrid",       label: "Hybrid" },
-  { key: "real_estate",  label: "Real Estate" },
-  { key: "other",        label: "Other" },
-];
 
 const ASSET_TYPES = Object.entries(ASSET_TYPE_META).map(([key, val]) => ({
   key: key as AssetType,
@@ -37,7 +29,6 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
   const updateMutation = useUpdateAsset();
 
   const [type, setType] = useState<AssetType>("mutual_fund");
-  const [subType, setSubType] = useState<AssetSubType>("equity");
   const [name, setName] = useState("");
   const [invested, setInvested] = useState("");
   const [current, setCurrent] = useState("");
@@ -52,7 +43,6 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
   useEffect(() => {
     if (visible && existing) {
       setType(existing.type);
-      setSubType(existing.subType);
       setName(existing.name);
       setInvested(String(existing.investedAmount));
       setCurrent(String(existing.currentValue));
@@ -64,7 +54,7 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
       setMaturityDate(existing.maturityDate ?? "");
       setNotes(existing.notes ?? "");
     } else if (visible && !existing) {
-      setType("mutual_fund"); setSubType("equity"); setName("");
+      setType("mutual_fund"); setName("");
       setInvested(""); setCurrent(""); setUnits(""); setCurrentPrice("");
       setBroker(""); setFolioNumber(""); setInterestRate(""); setMaturityDate(""); setNotes("");
     }
@@ -83,7 +73,6 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
       id: existing?.id ?? (uuid.v4() as string),
       name: name.trim(),
       type,
-      subType,
       investedAmount: inv,
       currentValue: cur || inv,
       units: units ? parseFloat(units) : undefined,
@@ -139,7 +128,7 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
                   }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16 }}>{t?.icon}</Text>
+                  {(() => { const Icon = ASSET_TYPE_ICONS[t.key] ?? ASSET_TYPE_ICONS["other"]; return <Icon size={16} color={active ? t.color : colors.textSecondary} strokeWidth={1.7} />; })()}
                   <Text style={[styles.typeLabel, { color: active ? t.color : colors.text, fontWeight: active ? typography.weight.semibold : typography.weight.regular, fontSize: typography.size.xs }]}>
                     {t.label}
                   </Text>
@@ -147,29 +136,6 @@ export default function AddAssetModal({ visible, onClose, existing }: Props) {
               );
             })}
           </View>
-
-          {/* Sub type */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>SUB TYPE</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subTypeRow}>
-            {SUB_TYPES.map((s) => {
-              const active = subType === s.key;
-              return (
-                <TouchableOpacity
-                  key={s.key}
-                  onPress={() => setSubType(s.key)}
-                  style={[styles.subTypeChip, {
-                    backgroundColor: active ? meta.color : colors.surfaceAlt,
-                    borderColor: active ? meta.color : colors.border,
-                  }]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.subTypeLabel, { color: active ? "#fff" : colors.textSecondary, fontWeight: active ? typography.weight.semibold : typography.weight.regular }]}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
 
           {/* Name */}
           <Text style={[styles.label, { color: colors.textSecondary }]}>ASSET NAME</Text>
@@ -297,9 +263,6 @@ const styles = StyleSheet.create({
   typeGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 8 },
   typeChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   typeLabel: {},
-  subTypeRow: { paddingHorizontal: 16, gap: 8 },
-  subTypeChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  subTypeLabel: { fontSize: 12 },
   row: { flexDirection: "row", gap: 8, paddingHorizontal: 16 },
   inputBox: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 11 },
   input: { flex: 1, padding: 0 },

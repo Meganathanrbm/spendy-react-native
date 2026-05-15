@@ -251,51 +251,39 @@ export function isBankSMS(sender: string, sms: string): boolean {
 // Runs on the full raw SMS body for maximum coverage (merchant alone is often null).
 
 export type SuggestedCategory =
-  | "Food & Dining"
+  | "Food"
   | "Transport"
   | "Shopping"
   | "Entertainment"
-  | "Healthcare"
-  | "Utilities"
-  | "Investments"
+  | "Health"
+  | "Bills"
   | "Education"
   | "Travel"
-  | "Insurance"
-  | "Rent & Housing"
+  | "Rent"
   | "Salary"
-  | "Refund"
-  | "Transfer"
-  | "Others";
+  | "Other";
 
 const CATEGORY_RULES: { category: SuggestedCategory; pattern: RegExp }[] = [
   // Food
-  { category: "Food & Dining",   pattern: /swiggy|zomato|domino|pizza|mcdonald|burger|kfc|starbucks|cafe|restaurant|food|bigbasket|blinkit|zepto|dunzo|grofer/i },
+  { category: "Food",          pattern: /swiggy|zomato|domino|pizza|mcdonald|burger|kfc|starbucks|cafe|restaurant|food|bigbasket|blinkit|zepto|dunzo|grofer/i },
   // Transport
-  { category: "Transport",       pattern: /uber|ola|rapido|taxi|metro|dmrc|bmtc|ksrtc|irctc|railway|petrol|fuel|indian\s*oil|hp\s*petrol|bharat\s*petrol|bp\s*gas|fastag|toll/i },
+  { category: "Transport",     pattern: /uber|ola|rapido|taxi|metro|dmrc|bmtc|ksrtc|irctc|railway|petrol|fuel|indian\s*oil|hp\s*petrol|bharat\s*petrol|bp\s*gas|fastag|toll/i },
   // Travel
-  { category: "Travel",          pattern: /makemytrip|goibibo|yatra|cleartrip|ixigo|airbnb|booking\.com|hotel|flight|airlines|air\s*india|indigo|spicejet/i },
+  { category: "Travel",        pattern: /makemytrip|goibibo|yatra|cleartrip|ixigo|airbnb|booking\.com|hotel|flight|airlines|air\s*india|indigo|spicejet/i },
   // Shopping
-  { category: "Shopping",        pattern: /amazon|flipkart|myntra|meesho|snapdeal|ajio|nykaa|tatacliq|reliance|dmart|bigbazar|shoppers.stop/i },
+  { category: "Shopping",      pattern: /amazon|flipkart|myntra|meesho|snapdeal|ajio|nykaa|tatacliq|reliance|dmart|bigbazar|shoppers.stop/i },
   // Entertainment
-  { category: "Entertainment",   pattern: /netflix|hotstar|prime\s*video|sonyliv|zee5|jiocinema|spotify|gaana|wynk|youtube\s*premium|bookmyshow|inox|pvr/i },
-  // Healthcare
-  { category: "Healthcare",      pattern: /hospital|pharmacy|medical|clinic|practo|1mg|netmeds|apollo|fortis|manipal|apollo pharmacy/i },
-  // Utilities
-  { category: "Utilities",       pattern: /electricity|power\s*bill|water\s*bill|gas\s*bill|airtel|jio|vi\b|vodafone|bsnl|mtnl|recharge|broadband|internet|dth|tata\s*sky|dish\s*tv/i },
-  // Investments
-  { category: "Investments",     pattern: /zerodha|groww|upstox|kuvera|paytm\s*money|mutual\s*fund|sip|demat|nse|bse|ipo|nps|ppf/i },
+  { category: "Entertainment", pattern: /netflix|hotstar|prime\s*video|sonyliv|zee5|jiocinema|spotify|gaana|wynk|youtube\s*premium|bookmyshow|inox|pvr/i },
+  // Health
+  { category: "Health",        pattern: /hospital|pharmacy|medical|clinic|practo|1mg|netmeds|apollo|fortis|manipal|apollo pharmacy/i },
+  // Bills (utilities + insurance)
+  { category: "Bills",         pattern: /electricity|power\s*bill|water\s*bill|gas\s*bill|airtel|jio|vi\b|vodafone|bsnl|mtnl|recharge|broadband|internet|dth|tata\s*sky|dish\s*tv|insurance|lic\b|policy|premium\s*paid|term\s*plan|health\s*plan/i },
   // Education
-  { category: "Education",       pattern: /byju|unacademy|vedantu|coursera|udemy|college|school|university|tuition|exam\s*fee|admission\s*fee/i },
-  // Insurance
-  { category: "Insurance",       pattern: /insurance|lic\b|policy|premium\s*paid|term\s*plan|health\s*plan/i },
-  // Rent / Housing
-  { category: "Rent & Housing",  pattern: /rent|maintenance|society|housing\s*board|property\s*tax|emi\s+(?:for|of)|home\s*loan/i },
+  { category: "Education",     pattern: /byju|unacademy|vedantu|coursera|udemy|college|school|university|tuition|exam\s*fee|admission\s*fee/i },
+  // Rent
+  { category: "Rent",          pattern: /rent|maintenance|society|housing\s*board|property\s*tax|emi\s+(?:for|of)|home\s*loan/i },
   // Salary / income
-  { category: "Salary",          pattern: /salary|payroll|wages/i },
-  // Refund
-  { category: "Refund",          pattern: /refund|reversal|cashback\s+(?:of|credited)/i },
-  // Transfer (own accounts, UPI generic)
-  { category: "Transfer",        pattern: /neft|rtgs|imps|upi|transfer\s+(?:to|from)|moved\s+to/i },
+  { category: "Salary",        pattern: /salary|payroll|wages/i },
 ];
 
 export function suggestCategory(
@@ -304,9 +292,8 @@ export function suggestCategory(
   type: "income" | "expense"
 ): { category: SuggestedCategory; icon: string } {
   if (type === "income") {
-    if (/salary|payroll/i.test(sms)) return { category: "Salary",  icon: "💼" };
-    if (/refund|reversal/i.test(sms))return { category: "Refund",  icon: "↩️" };
-    return { category: "Others", icon: "💰" };
+    if (/salary|payroll/i.test(sms)) return { category: "Salary", icon: "Briefcase" };
+    return { category: "Other", icon: "Package" };
   }
 
   const haystack = `${sms} ${merchant ?? ""}`;
@@ -315,25 +302,21 @@ export function suggestCategory(
       return { category, icon: CATEGORY_ICON[category] };
     }
   }
-  return { category: "Others", icon: "💸" };
+  return { category: "Other", icon: "Package" };
 }
 
 const CATEGORY_ICON: Record<SuggestedCategory, string> = {
-  "Food & Dining":   "🍔",
-  "Transport":       "🚗",
-  "Shopping":        "🛍️",
-  "Entertainment":   "🎬",
-  "Healthcare":      "💊",
-  "Utilities":       "⚡",
-  "Investments":     "📈",
-  "Education":       "📚",
-  "Travel":          "✈️",
-  "Insurance":       "🛡️",
-  "Rent & Housing":  "🏠",
-  "Salary":          "💼",
-  "Refund":          "↩️",
-  "Transfer":        "↔️",
-  "Others":          "💸",
+  "Food":          "Utensils",
+  "Transport":     "Car",
+  "Shopping":      "ShoppingBag",
+  "Entertainment": "Film",
+  "Health":        "Pill",
+  "Bills":         "ReceiptText",
+  "Education":     "BookOpen",
+  "Travel":        "Plane",
+  "Rent":          "House",
+  "Salary":        "Briefcase",
+  "Other":         "Package",
 };
 
 // ─── Main parser ──────────────────────────────────────────────────────────────

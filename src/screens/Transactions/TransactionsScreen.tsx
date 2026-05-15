@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "../../contexts/AuthContext";
 
 type Transaction = {
   id: string;
@@ -19,15 +20,15 @@ type Transaction = {
   date: string;
 };
 
-const STORAGE_KEY = "@spendy_transactions";
-
 export default function TransactionsScreen() {
+  const { user } = useAuth();
+  const storageKey = `@spendy_transactions_${user?.email}`;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadTransactions = async () => {
     try {
-      const json = await AsyncStorage.getItem(STORAGE_KEY);
+      const json = await AsyncStorage.getItem(storageKey);
       const data = json ? JSON.parse(json) : [];
       setTransactions(data.reverse());
     } catch (err) {
@@ -44,7 +45,7 @@ export default function TransactionsScreen() {
         onPress: async () => {
           const updated = transactions.filter((t) => t.id !== id);
           setTransactions(updated);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
         },
       },
     ]);

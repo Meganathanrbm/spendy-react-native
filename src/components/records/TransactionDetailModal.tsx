@@ -75,7 +75,7 @@ export default function TransactionDetailModal({
   const accountName = (id?: string) => {
     if (!id) return "—";
     const acc = accounts.find((a) => a.id === id);
-    return acc ? `${acc.icon} ${acc.name}` : "—";
+    return acc ? acc.name : "—";
   };
 
   const tx = transaction;

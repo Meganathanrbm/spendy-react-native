@@ -8,7 +8,6 @@ import { layout } from "../../theme/spacing";
 
 export type BudgetCardData = {
   categoryName: string;
-  categoryIcon: string;
   categoryColor: string;
   limit: number;
   spent: number;
@@ -25,7 +24,7 @@ type Props = {
 export default function BudgetCard({ data, onEdit, onDelete }: Props) {
   const { colors, typography } = useTheme();
 
-  const { categoryName, categoryIcon, categoryColor, limit, spent } = data;
+  const { categoryName, categoryColor, limit, spent } = data;
   const remaining = limit - spent;
   const percent = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
   const isExceeded = spent > limit;

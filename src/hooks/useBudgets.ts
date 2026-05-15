@@ -5,31 +5,41 @@ import {
   saveBudget,
   deleteBudget,
 } from "../lib/api/budgets";
+import { useAuth } from "../contexts/AuthContext";
 import { Budget } from "../types";
 
-export const BUDGETS_KEY = ["budgets"] as const;
-
-export const useBudgets = () =>
-  useQuery({ queryKey: BUDGETS_KEY, queryFn: getBudgets });
-
-export const useBudgetsByMonth = (month: string) =>
-  useQuery({
-    queryKey: [...BUDGETS_KEY, month],
-    queryFn: () => getBudgetsForMonth(month),
+export const useBudgets = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["budgets", user?.email],
+    queryFn: () => getBudgets(user!.email),
+    enabled: !!user,
   });
+};
+
+export const useBudgetsByMonth = (month: string) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["budgets", user?.email, month],
+    queryFn: () => getBudgetsForMonth(user!.email, month),
+    enabled: !!user,
+  });
+};
 
 export const useSaveBudget = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: saveBudget,
-    onSuccess: () => qc.invalidateQueries({ queryKey: BUDGETS_KEY }),
+    mutationFn: (budget: Budget) => saveBudget(user!.email, budget),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets", user?.email] }),
   });
 };
 
 export const useDeleteBudget = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteBudget(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: BUDGETS_KEY }),
+    mutationFn: (id: string) => deleteBudget(user!.email, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budgets", user?.email] }),
   });
 };

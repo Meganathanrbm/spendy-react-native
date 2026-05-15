@@ -11,6 +11,25 @@ export type CategoryStat = {
   percent: number;
 };
 
+// Colors for categories not defined in the system — distinct from all named category colors
+const UNKNOWN_CATEGORY_COLORS = [
+  "#F43F5E", // rose
+  "#FB923C", // orange-light
+  "#A78BFA", // violet-light
+  "#38BDF8", // sky
+  "#E879F9", // fuchsia
+  "#84CC16", // lime
+  "#14B8A6", // teal
+  "#FBBF24", // amber-light
+];
+
+// Deterministic color from name so the same category always gets the same color
+function colorForUnknown(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return UNKNOWN_CATEGORY_COLORS[Math.abs(h) % UNKNOWN_CATEGORY_COLORS.length];
+}
+
 /** Aggregate expenses by category for a list of transactions */
 export const getCategoryStats = (
   transactions: Transaction[],
@@ -34,8 +53,8 @@ export const getCategoryStats = (
       const cat = categories.find((c) => c.name === name);
       return {
         name,
-        icon: cat?.icon ?? "📦",
-        color: cat?.color ?? "#64748B",
+        icon: cat?.icon ?? "Package",
+        color: cat?.color ?? colorForUnknown(name),
         amount: stat.amount,
         count: stat.count,
         percent: (stat.amount / total) * 100,
@@ -60,6 +79,23 @@ export const getWeeklyFlow = (transactions: Transaction[]) => {
       expense: dayExpense,
     };
   });
+};
+
+/** Daily expense flow for any pre-filtered set of transactions (period-agnostic) */
+export const getPeriodFlow = (transactions: Transaction[]) => {
+  const expenses = transactions.filter((t) => t.type === "expense");
+  const map = new Map<string, number>();
+  for (const t of expenses) {
+    const key = toDateKey(t.date);
+    map.set(key, (map.get(key) ?? 0) + t.amount);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, expense]) => {
+      const d = new Date(date + "T00:00:00");
+      const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return { day: DAY_LABELS[d.getDay()], date, expense };
+    });
 };
 
 /** Daily expense flow across all days in a month */

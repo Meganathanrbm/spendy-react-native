@@ -8,7 +8,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { X, Check, Delete, Calendar, Clock } from "lucide-react-native";
+import { X, Check, Delete } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type {
   NativeStackNavigationProp,
@@ -176,7 +176,7 @@ export default function AddTransactionScreen() {
       </View>
 
       {/* ── Type toggle ── */}
-      <View style={{ paddingTop: 14 }}>
+      <View style={{ paddingTop: 10 }}>
         <TypeToggle value={type} onChange={setType} />
       </View>
 
@@ -198,7 +198,7 @@ export default function AddTransactionScreen() {
       <View
         style={[
           styles.descriptionBox,
-          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+          { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
         <TextInput
@@ -208,11 +208,11 @@ export default function AddTransactionScreen() {
           onChangeText={setDescription}
           style={[
             styles.descriptionInput,
-            { color: colors.text, fontSize: typography.size.base },
+            { color: colors.text, fontSize: 13 },
           ]}
           maxLength={150}
           multiline
-          numberOfLines={3}
+          numberOfLines={2}
         />
       </View>
 
@@ -220,7 +220,7 @@ export default function AddTransactionScreen() {
       <View
         style={[
           styles.amountRow,
-          { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+          { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
         <Text
@@ -228,8 +228,8 @@ export default function AddTransactionScreen() {
             styles.amountText,
             {
               color: parseFloat(amount) > 0 ? amountColor : colors.textMuted,
-              fontSize: typography.size["4xl"],
-              fontWeight: typography.weight.bold,
+              fontSize: 32,
+              fontWeight: "600",
               fontVariant: ["tabular-nums"],
             },
           ]}
@@ -239,7 +239,7 @@ export default function AddTransactionScreen() {
           {parseFloat(amount) > 0 ? `${amountPrefix}₹${amount}` : "0"}
         </Text>
         <TouchableOpacity onPress={handleBackspace} style={styles.backspaceBtn}>
-          <Delete size={24} color={accentColor} strokeWidth={1.7} />
+          <Delete size={20} color={colors.textSecondary} strokeWidth={1.7} />
         </TouchableOpacity>
       </View>
 
@@ -262,20 +262,8 @@ export default function AddTransactionScreen() {
           },
         ]}
       >
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          style={[
-            styles.datePill,
-            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-          ]}
-        >
-          <Calendar size={14} color={colors.textSecondary} strokeWidth={1.7} />
-          <Text
-            style={[
-              styles.datePillText,
-              { color: colors.text, fontSize: typography.size.sm },
-            ]}
-          >
+        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePill}>
+          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
             {date.toLocaleDateString("en-IN", {
               day: "2-digit",
               month: "short",
@@ -284,24 +272,10 @@ export default function AddTransactionScreen() {
           </Text>
         </TouchableOpacity>
 
-        <View
-          style={[styles.dateDivider, { backgroundColor: colors.border }]}
-        />
+        <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
 
-        <TouchableOpacity
-          onPress={() => setShowTimePicker(true)}
-          style={[
-            styles.datePill,
-            { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-          ]}
-        >
-          <Clock size={14} color={colors.textSecondary} strokeWidth={1.7} />
-          <Text
-            style={[
-              styles.datePillText,
-              { color: colors.text, fontSize: typography.size.sm },
-            ]}
-          >
+        <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.datePill}>
+          <Text style={[styles.datePillText, { color: colors.text, fontSize: typography.size.sm }]}>
             {date.toLocaleTimeString("en-IN", {
               hour: "numeric",
               minute: "2-digit",
@@ -359,39 +333,40 @@ const styles = StyleSheet.create({
 
   pickerRow: {
     flexDirection: "row",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     gap: 10,
     marginBottom: 10,
   },
 
   descriptionBox: {
-    marginHorizontal: 16,
+    marginHorizontal: 14,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 8,
+    paddingVertical: 12,
+    marginBottom: 10,
   },
   descriptionInput: {
-    minHeight: 64,
+    minHeight: 52,
     padding: 0,
     textAlignVertical: "top",
-    lineHeight: 20,
+    lineHeight: 19,
   },
 
   amountRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 16,
+    marginHorizontal: 14,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     marginBottom: 10,
   },
   amountText: {
     flex: 1,
     letterSpacing: -1,
+    textAlign: "right",
   },
   backspaceBtn: {
     paddingLeft: 12,
@@ -399,7 +374,7 @@ const styles = StyleSheet.create({
 
   calculatorWrapper: {
     flex: 1,
-    minHeight: 220,
+    minHeight: 190,
   },
 
   dateRow: {
@@ -416,13 +391,8 @@ const styles = StyleSheet.create({
     height: 16,
   },
   datePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
   datePillText: {},
 });

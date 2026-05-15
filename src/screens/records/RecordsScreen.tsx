@@ -40,6 +40,7 @@ import TransactionItem from "../../components/records/TransactionItem";
 import TransactionDetailModal from "../../components/records/TransactionDetailModal";
 import { SearchButton } from "../../components/common/searchButton/SearchButton";
 import { ListHeader } from "../../components/records/ListHeader";
+import { TransactionListSkeleton } from "../../components/records/TransactionItemSkeleton";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -52,12 +53,13 @@ export default function RecordsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  console.log("selectedTx", selectedTx);
+
   const {
     data: transactions = [],
     isLoading,
     refetch,
   } = useTransactionsByMonth(month);
+  const isFirstLoad = isLoading && transactions.length === 0;
   const { data: primaryAccount } = usePrimaryAccount();
   const deleteMutation = useDeleteTransaction();
   // Destructure the stable mutate fn so handleDelete doesn't invalidate every render
@@ -294,27 +296,31 @@ export default function RecordsScreen() {
         </View>
       )}
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-          />
-        }
-        ListHeaderComponent={ListHeaderComponent}
-        renderSectionHeader={renderSectionHeader}
-        renderItem={renderItem}
-        ItemSeparatorComponent={() => null}
-        ListEmptyComponent={ListEmptyComponent}
-        stickySectionHeadersEnabled
-        contentContainerStyle={{
-          paddingBottom: layout.tabBarHeight + insets.bottom + 24,
-          flexGrow: 1,
-        }}
-      />
+      {isFirstLoad ? (
+        <TransactionListSkeleton />
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+            />
+          }
+          ListHeaderComponent={ListHeaderComponent}
+          renderSectionHeader={renderSectionHeader}
+          renderItem={renderItem}
+          ItemSeparatorComponent={() => null}
+          ListEmptyComponent={ListEmptyComponent}
+          stickySectionHeadersEnabled
+          contentContainerStyle={{
+            paddingBottom: layout.tabBarHeight + insets.bottom + 24,
+            flexGrow: 1,
+          }}
+        />
+      )}
 
       <TransactionDetailModal
         transaction={selectedTx}
